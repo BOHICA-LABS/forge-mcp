@@ -1,8 +1,8 @@
 ---
 document_type: product-brief
 level: L1
-version: "1.0"
-status: draft
+version: "1.1"
+status: revised
 producer: product-owner
 timestamp: 2026-03-29T00:56:00
 phase: 1a
@@ -120,7 +120,7 @@ raw logs, and manual JSON wrangling.
 | Cross-platform distribution | Zero-dependency static binary targets | 5 (Linux x64, Linux ARM64, macOS Intel, macOS ARM64, Windows x64) |
 | TUI rendering performance | Sustained frame rate at 100 events/sec ingest | ≥ 60fps with < 5MB RSS |
 | Conformance suite coverage | Percentage of MCP 2025-11-25 spec methods exercised | ≥ 90% |
-| Security audit coverage | Percentage of OWASP MCP top-10 risk categories covered by runtime checks | ≥ 80% |
+| Security audit coverage | Percentage of OWASP Agentic Skills Top 10 (AST10, Dec 2025) risk categories covered by runtime checks | ≥ 80% |
 | Binary size | Stripped binary with LTO | < 25MB |
 
 ## Constraints & Integration Points
@@ -133,6 +133,10 @@ raw logs, and manual JSON wrangling.
   handling must NOT be reimplemented — this is a hard constraint to ensure spec
   compliance and reduce maintenance burden. Rolling custom protocol code is the
   primary risk in existing Rust MCP tools.
+- **rmcp dependency risk (medium):** The rmcp crate's maturity and maintenance
+  cadence could not be independently verified during market research. Engineering
+  must assess rmcp's release frequency, issue response time, and bus factor
+  during the architecture phase before committing to this dependency.
 - **TUI framework:** `ratatui` v0.30+ with `crossterm` backend. No ncurses
   dependency.
 - **Async runtime:** `tokio` (required by rmcp).
