@@ -16,7 +16,7 @@
 
 ## Current Phase
 
-### Status: Phase 1 — Spec Crystallization (SPEC REVIEW CONVERGENCE COMPLETE)
+### Status: Phase 2 — Story Decomposition (IN PROGRESS)
 
 - ✅ Step 1: Repo initialization complete
 - ✅ Step 2: Git worktree setup complete (.factory/ mounted on factory-artifacts branch)
@@ -27,11 +27,13 @@
 - ✅ Phase 1a: L3 PRD + Behavioral Contracts — COMPLETE
 - ✅ Phase 1b: Architecture & UX Spec — COMPLETE
 - ✅ Phase 1c: Verification Properties & Holdout Scenarios — COMPLETE
-- ✅ Phase 1d: Adversarial Spec Review — CONVERGED (Pass 3, 0 findings)
-  - Adversarial passes: 18 → 4 → 0 findings
-  - Status: CONVERGED
-- ⏳ Phase 1 Constructive Spec Review — IN PROGRESS
-- ⏳ Phase 1 Human Approval Gate — PENDING
+- ✅ Phase 1d: Adversarial Spec Review — FULLY_CONVERGED (Pass 4, 0 findings, 0 nitpicks)
+  - Adversarial passes: 18 → 4 → 0 → 0 findings
+  - Status: FULLY_CONVERGED
+- ✅ Phase 1 Constructive Spec Review — COMPLETE
+- ✅ Phase 1 Human Approval Gate — APPROVED (2026-03-29)
+- ⏳ Phase 2 Story Decomposition — IN PROGRESS
+  - Next: Produce epics, stories, dependency graph, wave schedule
 
 ## Phase Transitions
 
@@ -39,9 +41,10 @@
 |-------|--------|------|------|
 | Pre-Pipeline | COMPLETE | Market Intelligence GO | 2026-03-29 |
 | Phase 1a-c: Spec Production | COMPLETE | Spec readiness validation | 2026-03-29 |
-| Phase 1d: Adversarial Review | CONVERGED | 0 findings (Pass 3) | 2026-03-29 |
-| Phase 1: Constructive Review | IN PROGRESS | — | 2026-03-29 |
-| Phase 2 — Story Decomposition | PENDING | Phase 1 human approval | — |
+| Phase 1d: Adversarial Review | FULLY_CONVERGED | 0 findings (Pass 4) | 2026-03-29 |
+| Phase 1: Constructive Review | COMPLETE | Consensus achieved | 2026-03-29 |
+| Phase 1: Human Approval | APPROVED | Human gate passed | 2026-03-29 |
+| Phase 2 — Story Decomposition | IN PROGRESS | Phase 1 approved | 2026-03-29 |
 
 ## Artifact Manifest
 
@@ -72,9 +75,11 @@
 
 #### v0.1.0-greenfield
 
-- **Status:** Phase 1 Spec Crystallization (Convergence Complete)
+- **Status:** Phase 2 Story Decomposition (IN PROGRESS)
 - **Start Date:** 2026-03-29
 - **Phase 1 Start:** 2026-03-29
+- **Phase 1 Completion:** 2026-03-29 (APPROVED)
+- **Phase 2 Start:** 2026-03-29
 - **Expected Completion:** —
 - **Delivered Stories:** 0
 - **Fix PRs:** 0
@@ -108,9 +113,11 @@
 | Phase 1c Verification Properties & Holdout Scenarios | 2026-03-29 | ✅ Complete |
 | Phase 1d Adversarial Spec Review — Pass 1 | 2026-03-29 | ✅ Complete (18 findings) |
 | Phase 1d Adversarial Spec Review — Pass 2 | 2026-03-29 | ✅ Complete (4 findings) |
-| Phase 1d Adversarial Spec Review — Pass 3 | 2026-03-29 | ✅ CONVERGED (0 findings) |
-| Phase 1 Constructive Spec Review | 2026-03-29 | ⏳ In Progress |
-| Phase 1 Human Approval Gate | 2026-03-29 | ⏳ Pending |
+| Phase 1d Adversarial Spec Review — Pass 3 | 2026-03-29 | ✅ Complete (0 findings) |
+| Phase 1d Adversarial Spec Review — Pass 4 | 2026-03-29 | ✅ FULLY_CONVERGED (0 findings, 0 nitpicks) |
+| Phase 1 Constructive Spec Review | 2026-03-29 | ✅ Complete |
+| Phase 1 Human Approval Gate | 2026-03-29 | ✅ APPROVED |
+| Phase 2 Story Decomposition Start | 2026-03-29 | ⏳ In Progress |
 
 ## Current Activity
 
@@ -132,35 +139,40 @@
 - Pass 3: 0 findings (CONVERGED)
 - Status: Adversarial consensus achieved
 
-**Phase 1 Constructive Spec Review:** ⏳ IN PROGRESS
-- Next: Constructive review cycle
-- Gate: Consensus before Phase 1 approval
+**Phase 1 Constructive Spec Review:** ✅ COMPLETE
+- Consensus achieved
+- Spec package fully validated
+
+**Phase 1 Human Approval Gate:** ✅ APPROVED (2026-03-29)
+- Complete spec package approved by human
+- Ready to proceed to Phase 2
+
+**Phase 1d Adversarial Spec Review:** ✅ FULLY_CONVERGED
+- Pass 4: 0 findings, 0 nitpicks
+- Full adversarial consensus achieved
 
 ## Next Steps
 
-1. **Phase 1 Constructive Spec Review** ⏳ IN PROGRESS
-   - Constructive review cycle on converged spec package
-   - Alignment check and final polish
-   - Gate: Constructive consensus
-
-2. **Phase 1 Human Approval Gate** — PENDING
-   - Human review of complete spec package
-   - Approval before proceeding to Phase 2
-   - Gate: Human approval (REQUIRED)
-
-3. **Phase 2 — Story Decomposition** — QUEUED (pending Phase 1 approval)
-   - Break validated specs into epics and stories
+1. **Phase 2 — Story Decomposition** ⏳ IN PROGRESS
+   - Story-writer produces epics, stories, dependency graph, and wave schedule
+   - Break validated specs into implementation-ready stories
    - Define acceptance criteria and verification properties per story
-   - Create dependency graph
+   - Create story dependency graph and wave schedule
    - Gate: Story completeness and dependency validation
+
+2. **Phase 3 — Test-First Implementation** — QUEUED (pending Phase 2 story completion)
+   - Implement stories following TDD (Red Gate → Green → Refactor)
+   - Execute per-story verification properties
+   - Wave-based implementation and parallel execution
+   - Gate: All tests passing, 100% story coverage
 
 ---
 
-**Last Updated:** 2026-03-29 15:04 CDT (State Manager)
+**Last Updated:** 2026-03-29 15:26 CDT (State Manager)
 **Factory artifacts branch:** factory-artifacts
-**Pipeline Status:** ✅ Pre-Pipeline COMPLETE → ✅ Phase 1 Spec Production COMPLETE → Phase 1d CONVERGED (0 findings) → Phase 2 PENDING
+**Pipeline Status:** ✅ Pre-Pipeline COMPLETE → ✅ Phase 1 Spec Production COMPLETE → ✅ Phase 1d FULLY_CONVERGED (0 findings, 0 nitpicks, Pass 4) → ✅ Phase 1 APPROVED → Phase 2 IN PROGRESS
 **Market Intel:** ✅ GO — High Confidence (APPROVED)
 **Toolchain:** ✅ COMPLETE (all blockers resolved)
-**Adversarial Review:** ✅ CONVERGED (Pass 3, 0 findings)
-**Current Focus:** Phase 1 Constructive Spec Review → Phase 1 Human Approval
-**Next Gate:** Phase 1 Human Approval (REQUIRED before Phase 2)
+**Adversarial Review:** ✅ FULLY_CONVERGED (Pass 4, 0 findings, 0 nitpicks)
+**Current Focus:** Phase 2 Story Decomposition (IN PROGRESS)
+**Next Gate:** Phase 2 completion (story-writer → epics, stories, dependency graph, wave schedule)
