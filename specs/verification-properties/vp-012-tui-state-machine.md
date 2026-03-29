@@ -33,12 +33,12 @@ removal_reason: null
 
 ## Property Statement
 
-For any sequence of keyboard/mouse events, the TUI state machine (panel focus, navigation mode, input mode) **never enters an invalid state**. Additionally:
+For any sequence of keyboard/mouse events, the TUI state machine (panel focus, navigation mode, input mode) MUST NOT enter an invalid state. Additionally:
 
-1. All states are reachable from the initial state.
-2. The quit action is always reachable from any state.
+1. All states MUST be reachable from the initial state.
+2. The quit action MUST be reachable from any state.
 
-This is a **state machine safety** property: the TUI can never get "stuck" or enter a corrupted state regardless of user input.
+This is a **state machine safety** property: the TUI MUST NOT get "stuck" or enter a corrupted state regardless of user input.
 
 ## Source Contract
 
@@ -53,6 +53,7 @@ This is a **state machine safety** property: the TUI can never get "stuck" or en
 | Input space | Arbitrary event sequences (0..200 events) |
 | Event types | Keyboard keys, mouse clicks, resize events |
 | Iterations | 256+ cases |
+| Shrinking | Automatic — proptest shrinks failing cases to minimal reproduction |
 
 ## Harness Skeleton
 
@@ -151,9 +152,9 @@ proptest! {
 | Input space | Bounded event sequences (0..200 events), finite event types |
 | Complexity | Medium — depends on TUI state machine complexity |
 | Tool support | Excellent — proptest with enum strategies |
-| Precondition | TUI state machine must use bounded enum states (not arbitrary values) |
-| Time | Milliseconds per case |
-| Verdict | **FEASIBLE** (assuming bounded enum state representation) |
+| Precondition | TUI state machine MUST use bounded enum states (not arbitrary values) |
+| Expected time | Milliseconds per case |
+| Verdict | **FEASIBLE** |
 
 ## Lifecycle
 

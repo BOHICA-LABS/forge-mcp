@@ -33,9 +33,9 @@ removal_reason: null
 
 ## Property Statement
 
-For any sequence of pagination cursors returned by a server, `collect_all_pages()` terminates in at most `MAX_PAGES` (default 100) iterations. If a cursor repeats (cycle detection), iteration stops immediately and returns accumulated results.
+For any sequence of pagination cursors returned by a server, `collect_all_pages()` MUST terminate in at most `MAX_PAGES` (default 100) iterations. If a cursor repeats (cycle detection), iteration MUST stop immediately and return accumulated results. The function MUST NOT enter an infinite loop regardless of server behavior.
 
-This is a **termination** property: the pagination collector always completes within bounded time, regardless of server behavior.
+This is a **termination** property: the pagination collector always completes within bounded time.
 
 ## Source Contract
 
@@ -88,7 +88,7 @@ Pure-core version of the pagination collector that takes a cursor sequence and m
 | Input space | Bounded loop (100 max iterations), bounded cursor set (10 unique) |
 | Complexity | Low — loop with counter + set membership check |
 | Tool support | Kani handles bounded loops with `#[kani::unwind]` |
-| Time | Seconds to minutes |
+| Expected time | Seconds to minutes |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

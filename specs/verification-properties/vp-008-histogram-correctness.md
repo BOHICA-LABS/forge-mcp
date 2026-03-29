@@ -33,9 +33,9 @@ removal_reason: null
 
 ## Property Statement
 
-For any non-empty sequence of latency values, the histogram's **p50**, **p95**, and **p99** percentiles are computed correctly — that is, they match a reference sort-based implementation within a tolerance of 1.0ms.
+For any non-empty sequence of latency values, the histogram's **p50**, **p95**, and **p99** percentiles MUST be computed correctly — that is, they MUST match a reference sort-based implementation within a tolerance of 1.0ms.
 
-This is an **algorithmic correctness** property: the histogram's streaming/approximate percentile computation must agree with the ground-truth sorted-array method.
+This is an **algorithmic correctness** property: the histogram's streaming/approximate percentile computation MUST agree with the ground-truth sorted-array method.
 
 ## Source Contract
 
@@ -50,6 +50,8 @@ This is an **algorithmic correctness** property: the histogram's streaming/appro
 | Input space | Non-empty vectors of f64 values in [0.0, 10000.0], length 1..1000 |
 | Reference | Sort-based percentile computation |
 | Tolerance | 1.0ms (acceptable for streaming histogram approximation) |
+| Iterations | 256+ cases |
+| Shrinking | Automatic — proptest shrinks failing cases to minimal reproduction |
 
 ## Harness Skeleton
 
@@ -102,7 +104,7 @@ fn reference_percentile(sorted: &[f64], p: f64) -> f64 {
 | Input space | Bounded vectors (1..1000 elements, values 0..10000) |
 | Complexity | Low — comparison against reference implementation |
 | Tool support | Excellent — proptest generates f64 vectors natively |
-| Time | Milliseconds per case |
+| Expected time | Milliseconds per case |
 | Tolerance | 1.0ms — reasonable for streaming histogram approximation |
 | Verdict | **FEASIBLE** |
 

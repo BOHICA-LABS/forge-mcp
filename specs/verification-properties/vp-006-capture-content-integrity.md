@@ -33,9 +33,9 @@ removal_reason: null
 
 ## Property Statement
 
-For any `McpMessage` `m`, after `buffer.append(m.clone())`, retrieving the message from the buffer yields a message where `raw_bytes` is **byte-identical** to the original.
+For any `McpMessage` `m`, after `buffer.append(m.clone())`, retrieving the message from the buffer MUST yield a message where `raw_bytes` is **byte-identical** to the original. The capture buffer MUST NOT corrupt, truncate, or transform message content.
 
-This is a **data integrity** property: the capture buffer must never corrupt, truncate, or transform message content.
+This is a **data integrity** property: the capture buffer preserves exact byte content through the append-retrieve round trip.
 
 ## Source Contract
 
@@ -100,7 +100,7 @@ fn arb_mcp_message() -> impl Strategy<Value = McpMessage> {
 | Input space | Arbitrary messages — well-suited for property-based testing |
 | Complexity | Low — append + retrieve is a simple round-trip check |
 | Tool support | Excellent — proptest is Rust's standard PBT library |
-| Time | Milliseconds per case, seconds total |
+| Expected time | Milliseconds per case, seconds total |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

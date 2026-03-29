@@ -33,9 +33,9 @@ removal_reason: null
 
 ## Property Statement
 
-For any `CaptureBuffer` `b` and `TrafficFilter` `f`, the result of `b.filter(f)` preserves the **relative ordering** of messages from the original buffer. That is, if message A appears before message B in the buffer, and both pass the filter, then A appears before B in the filtered result.
+For any `CaptureBuffer` `b` and `TrafficFilter` `f`, the result of `b.filter(f)` MUST preserve the **relative ordering** of messages from the original buffer. That is, if message A appears before message B in the buffer, and both pass the filter, then A MUST appear before B in the filtered result.
 
-This is an **order preservation** property: filtering is a monotonic projection — it removes elements but never reorders them.
+This is an **order preservation** property: filtering MUST be a monotonic projection — it removes elements but MUST NOT reorder them.
 
 ## Source Contract
 
@@ -125,7 +125,7 @@ This property composes with VP-005 (ring buffer FIFO ordering): VP-005 guarantee
 | Input space | Bounded buffers (0..100 messages), structured filters |
 | Complexity | Low — order check is a simple pairwise comparison |
 | Tool support | Excellent — proptest with custom strategies |
-| Time | Milliseconds per case |
+| Expected time | Milliseconds per case |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

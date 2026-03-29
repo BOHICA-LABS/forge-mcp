@@ -49,7 +49,7 @@ This is a **total function** property applied to the dual-schema configuration p
 | Tool | `cargo-fuzz` with `libfuzzer-sys` |
 | Input space | Arbitrary byte sequences (representing config file content) |
 | Coverage target | All code paths in `parse_config` for both schema variants |
-| Iteration time | Milliseconds |
+| Expected time | Milliseconds per iteration |
 | Corpus | Seed with valid config samples for both schemas + edge cases |
 
 ## Harness Skeleton
@@ -83,8 +83,7 @@ Place in `fuzz/corpus/parse_config/`:
 | Input space | Arbitrary bytes — same pattern as VP-001 |
 | Complexity | Low — config parsing is self-contained, no network I/O |
 | Tool support | Excellent — same cargo-fuzz infrastructure as VP-001 |
-| Time per iteration | Milliseconds |
-| Expected duration | Minutes to hours for deep coverage |
+| Expected time | Milliseconds per iteration; minutes to hours for deep coverage |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

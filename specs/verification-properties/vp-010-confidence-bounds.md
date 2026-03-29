@@ -33,13 +33,13 @@ removal_reason: null
 
 ## Property Statement
 
-For any `SecurityFinding` produced by `analyze_message()` or `detect_schema_drift()`, the `confidence` field satisfies:
+For any `SecurityFinding` produced by `analyze_message()` or `detect_schema_drift()`, the `confidence` field MUST satisfy:
 
 ```
 0.0 <= confidence <= 1.0
 ```
 
-This is a **value range** invariant: confidence scores are always valid probabilities.
+This is a **value range invariant** property: confidence scores MUST always be valid probabilities.
 
 ## Source Contract
 
@@ -101,7 +101,7 @@ While proptest could test random messages, Kani provides **exhaustive** coverage
 | Input space | Bounded message structure + fixed rule set |
 | Complexity | Medium — depends on number of rules and confidence calculation logic |
 | Tool support | Kani handles f64 comparisons via SAT encoding |
-| Time | Seconds to minutes |
+| Expected time | Seconds to minutes |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

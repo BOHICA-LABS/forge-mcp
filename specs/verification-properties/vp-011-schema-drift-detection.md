@@ -33,13 +33,13 @@ removal_reason: null
 
 ## Property Statement
 
-For any two tool sets that differ in at least one field of at least one tool, `detect_schema_drift(prev, current)` returns a **non-empty** `Vec<SecurityFinding>`.
+For any two tool sets that differ in at least one field of at least one tool, `detect_schema_drift(prev, current)` MUST return a **non-empty** `Vec<SecurityFinding>`.
 
 Drift detection uses a **two-tier model**:
-- **Canonical fields** (name, description, inputSchema): changes produce findings with severity ≥ high.
-- **Auxiliary fields** (annotations): changes produce findings with severity = info.
+- **Canonical fields** (name, description, inputSchema): changes MUST produce findings with severity ≥ high.
+- **Auxiliary fields** (annotations): changes MUST produce findings with severity = info.
 
-This is a **completeness** property: the drift detector must catch every possible mutation. Zero false negatives for single-field changes. The severity tier depends on the field category.
+This is a **completeness** property: the drift detector MUST catch every possible mutation. Zero false negatives for single-field changes.
 
 ## Source Contract
 
@@ -56,6 +56,7 @@ This is a **completeness** property: the drift detector must catch every possibl
 | Input space | Arbitrary tool sets (1..10 tools) with single-field mutations |
 | Strategy | Generate base tool set, then apply exactly one known mutation |
 | Iterations | 256+ cases |
+| Shrinking | Automatic — proptest shrinks failing cases to minimal reproduction |
 
 ## Harness Skeleton
 
@@ -135,7 +136,7 @@ enum ToolMutation {
 | Input space | Bounded tool sets (1..10 tools) with structured mutations |
 | Complexity | Medium — requires custom strategies for tool definitions |
 | Tool support | Excellent — proptest handles custom enum strategies well |
-| Time | Milliseconds per case |
+| Expected time | Milliseconds per case |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

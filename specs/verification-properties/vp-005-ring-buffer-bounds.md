@@ -35,11 +35,11 @@ removal_reason: null
 
 For a `CaptureBuffer` with capacity `N`:
 
-1. **Bound invariant:** `len()` never exceeds `N` after any sequence of operations.
-2. **FIFO eviction:** After `append` when the buffer is full, the oldest message is evicted.
-3. **Ordering invariant:** Iteration order always matches insertion order for non-evicted messages.
+1. **Bound invariant:** `len()` MUST NOT exceed `N` after any sequence of operations.
+2. **FIFO eviction:** After `append` when the buffer is full, the oldest message MUST be evicted.
+3. **Ordering invariant:** Iteration order MUST match insertion order for non-evicted messages.
 
-These three sub-properties together guarantee the ring buffer is memory-bounded and behaviorally correct.
+This is a **structural correctness** property: these three sub-properties together guarantee the ring buffer is memory-bounded and behaviorally correct.
 
 ## Source Contract
 
@@ -113,7 +113,7 @@ fn verify_fifo_eviction() {
 | Input space | Bounded buffer (N=8), bounded operations (16) — small state space |
 | Complexity | Low — ring buffer is a well-understood data structure |
 | Tool support | Kani handles bounded loops and array indexing well |
-| Time | Seconds to minutes |
+| Expected time | Seconds to minutes |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

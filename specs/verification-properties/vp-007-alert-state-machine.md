@@ -33,13 +33,15 @@ removal_reason: null
 
 ## Property Statement
 
-The alert state machine has exactly 3 states: **Normal**, **Breached**, **Recovered**. Valid transitions are:
+The alert state machine MUST have exactly 3 states: **Normal**, **Breached**, **Recovered**. Valid transitions are:
 
 - `Normal → Breached` (metric exceeds threshold)
 - `Breached → Recovered` (metric returns below threshold)
 - `Recovered → Breached` (metric exceeds threshold again)
 
-No other transitions are possible. Self-transitions (remaining in the same state) are allowed. Duplicate breach alerts are **never** emitted for the same threshold crossing.
+No other transitions are permitted. Self-transitions (remaining in the same state) are allowed. Duplicate breach alerts MUST NOT be emitted for the same threshold crossing.
+
+This is a **state machine safety** property: the alert system only makes valid transitions and never produces spurious alerts.
 
 ## Source Contract
 
@@ -135,7 +137,7 @@ fn verify_no_duplicate_breach_alert() {
 | Input space | 3 states, bounded events (10), bounded metric values |
 | Complexity | Low — simple state machine with 3 states |
 | Tool support | Kani handles enum-based state machines naturally |
-| Time | Seconds |
+| Expected time | Seconds |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

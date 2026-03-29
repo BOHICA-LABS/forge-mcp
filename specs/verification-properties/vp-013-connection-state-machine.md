@@ -33,7 +33,7 @@ removal_reason: null
 
 ## Property Statement
 
-The connection state machine (`Disconnected → Connecting → Connected → Error`) only makes **valid transitions**:
+The connection state machine (`Disconnected → Connecting → Connected → Error`) MUST only make **valid transitions**:
 
 - `Disconnected → Connecting` (initiate connection)
 - `Connecting → Connected` (connection established)
@@ -43,7 +43,9 @@ The connection state machine (`Disconnected → Connecting → Connected → Err
 - `Error → Connecting` (reconnect attempt)
 - `Error → Disconnected` (give up)
 
-No other transitions are possible. Self-transitions (remaining in the same state) are permitted as no-ops. `Connected` is **only reachable** after passing through `Connecting`.
+No other transitions are permitted. Self-transitions (remaining in the same state) are permitted as no-ops. `Connected` MUST only be reachable after passing through `Connecting`.
+
+This is a **state machine safety** property: the connection lifecycle MUST only traverse defined transitions and MUST NOT reach invalid states.
 
 ## Source Contract
 
@@ -143,7 +145,7 @@ fn verify_connected_requires_connecting() {
 | Input space | 4 states, bounded event sequence (10 events) |
 | Complexity | Low — well-defined state machine with few states |
 | Tool support | Kani excels at enum-based state machine verification |
-| Time | Seconds |
+| Expected time | Seconds |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

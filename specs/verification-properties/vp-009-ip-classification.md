@@ -33,14 +33,16 @@ removal_reason: null
 
 ## Property Statement
 
-For any IPv4 address (represented as `u32`), `classify_ip(addr)` correctly identifies:
+For any IPv4 address (represented as `u32`), `classify_ip(addr)` MUST correctly identify:
 
 1. **RFC1918 private ranges:** `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
 2. **Link-local:** `169.254.0.0/16`
 3. **Cloud metadata:** `169.254.169.254` specifically
 4. **Localhost:** `127.0.0.0/8`
 
-Classification has **zero false negatives** for these ranges. Every address in these ranges is classified correctly.
+Classification MUST have **zero false negatives** for these ranges. Every address in these ranges MUST be classified correctly.
+
+This is a **classification correctness** property: the IP classifier partitions all IPv4 addresses into the correct network category with exhaustive coverage.
 
 ## Source Contract
 
@@ -126,7 +128,7 @@ The harness implicitly covers boundary addresses through Kani's exhaustive symbo
 | Input space | u32 — Kani explores symbolically via bit-level SAT/SMT |
 | Complexity | Low — classification is pure bitwise arithmetic |
 | Tool support | Excellent — Kani excels at bit-manipulation proofs |
-| Time | Minutes |
+| Expected time | Minutes |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

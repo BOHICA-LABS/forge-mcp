@@ -33,12 +33,14 @@ removal_reason: null
 
 ## Property Statement
 
-For any JSON-RPC response `resp`, `classify_error(resp)` returns:
+For any JSON-RPC response `resp`, `classify_error(resp)` MUST return:
 - `McpError::Tool` if and only if `resp.result.isError == true`
 - `McpError::Protocol` if and only if `resp.error` is present with a JSON-RPC error code
 - `Ok` otherwise
 
-These three states are **mutually exclusive** and **exhaustive**. No response can be classified into more than one category, and every response is classified into exactly one.
+These three states MUST be **mutually exclusive** and **exhaustive**. No response can be classified into more than one category, and every response MUST be classified into exactly one.
+
+This is a **classification correctness** property: the error classifier partitions all responses into exactly three non-overlapping categories.
 
 ## Source Contract
 
@@ -93,7 +95,7 @@ Constructs a synthetic JSON-RPC response with the given field presence/flags. Mu
 | Input space | Small — 3 booleans + bounded payload structure |
 | Complexity | Low — classification is a simple match on field presence |
 | Tool support | Excellent — Kani handles boolean + enum reasoning natively |
-| Time | Seconds |
+| Expected time | Seconds |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

@@ -49,7 +49,7 @@ This is a **total function** property: every possible input produces a defined o
 | Tool | `cargo-fuzz` with `libfuzzer-sys` |
 | Input space | Arbitrary byte sequences up to 16MB (max message size) |
 | Coverage target | All code paths in `parse_jsonrpc` |
-| Iteration time | Seconds per iteration |
+| Expected time | Seconds per iteration |
 | Corpus | Seed with valid JSON-RPC samples + edge cases (empty, huge, nested) |
 
 ## Harness Skeleton
@@ -83,8 +83,7 @@ Place in `fuzz/corpus/parse_jsonrpc/`:
 | Input space | Arbitrary bytes up to 16MB — well-suited for fuzzing |
 | Complexity | Low — parsing is self-contained with no external dependencies |
 | Tool support | Excellent — cargo-fuzz is mature and well-integrated with Rust |
-| Time per iteration | Milliseconds |
-| Expected duration | Minutes to find shallow bugs; hours for deep coverage |
+| Expected time | Milliseconds per iteration; minutes to hours for deep coverage |
 | Verdict | **FEASIBLE** |
 
 ## Lifecycle

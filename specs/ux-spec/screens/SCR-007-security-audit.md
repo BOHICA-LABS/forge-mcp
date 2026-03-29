@@ -2,12 +2,12 @@
 document_type: ux-spec-screen
 screen_id: SCR-007
 screen_name: Security Audit View
-version: "1.1"
+version: "1.2"
 status: draft
 producer: ux-designer
-timestamp: 2026-03-29T14:15:00
+timestamp: 2026-03-29T15:17:00
 revised: 2026-03-29
-revision_reason: ADV-P1-003 — align suppression UX with BC-7.18.002 overlay semantics
+revision_reason: ADV-P3-001 — align AST10 category names in mock data with canonical BC-7.18.003 taxonomy
 phase: 1c
 complexity: complex
 traces_to: UX-INDEX.md
@@ -36,14 +36,14 @@ priority: P1
 ║  ──────────────────────────────────────────────────────────────────────  ║
 ║  SEV    CONF  CATEGORY          TITLE                             AST10  ║
 ║  ─────  ────  ───────────────── ─────────────────────────────── ──────  ║
-║  [CRIT] 0.92  Dangerous Pattern  execute_command: shell exec      AST02  ║
-║  [CRIT] 0.87  SSRF Attempt       http_get to 169.254.169.254      AST04  ║
-║  [HIGH] 0.81  Permission Escal.  Tool claimed unrestricted path   AST03  ║
-║  [HIGH] 0.79  Auth Validation    Missing auth header validation   AST07  ║
-║  [HIGH] 0.71  Dangerous Pattern  write_file: unrestricted write   AST02  ║
-║  [MED]  0.65  Schema Drift       read_file schema changed (hash)  AST09  ║
-║  [MED]  0.61  Root Enforcement   Root boundary not enforced       AST06  ║
-║  [LOW]  0.55  Dangerous Pattern  get_env: exposes env variables   AST02  ║
+║  [CRIT] 0.92  Malicious Skills   execute_command: shell exec      AST01  ║
+║  [CRIT] 0.87  Excess.Data Exp.  http_get to 169.254.169.254      AST02  ║
+║  [HIGH] 0.81  Over-Priv.Skills  Tool claimed unrestricted path   AST03  ║
+║  [HIGH] 0.79  Inad.Auth.        Missing auth header validation   AST05  ║
+║  [HIGH] 0.71  Malicious Skills  write_file: unrestricted write   AST03  ║
+║  [MED]  0.65  Insecure Metadata read_file schema changed (hash)  AST04  ║
+║  [MED]  0.61  Weak Isolation    Root boundary not enforced       AST06  ║
+║  [LOW]  0.55  Malicious Skills  get_env: exposes env variables   AST01  ║
 ║  [INFO] 0.51  Coverage           8 tools analyzed, 2 untested     —      ║
 ║                                                                          ║
 ║  ──────────────────────────────────────────────────────────────────────  ║
@@ -65,8 +65,8 @@ priority: P1
 ║  ──────────────────────────────────────────────────────────────────────  ║
 ║  SEV    CONF  CATEGORY          TITLE                   REASON    AST10  ║
 ║  ─────  ────  ───────────────── ──────────────────────  ────────  ─────  ║
-║  [SUPP] [HIGH] 0.75  Auth Val.  Missing auth (known)   FP:cfg    AST07  ║
-║  [SUPP] [MED]  0.60  Sch Drift  resource_list drift    Accepted  AST09  ║
+║  [SUPP] [HIGH] 0.75  Inad.Auth.  Missing auth (known)   FP:cfg   AST05  ║
+║  [SUPP] [MED]  0.60  Ins.Meta.   resource_list drift    Accepted AST04  ║
 ║                                                                          ║
 ║  Suppressed findings are preserved in reports (suppressed: true).        ║
 ║  ──────────────────────────────────────────────────────────────────────  ║
@@ -83,8 +83,8 @@ priority: P1
 ║  [CRIT] execute_command: shell execution capability detected             ║
 ║                                                                          ║
 ║  Severity:    Critical                 Confidence: 0.92 (high)          ║
-║  Category:    Dangerous Tool Pattern   AST10 Ref: AST02 (Indirect       ║
-║  Finding ID:  SEC-001                            Prompt Injection)       ║
+║  Category:    Malicious Skills         AST10 Ref: AST01 (Malicious      ║
+║  Finding ID:  SEC-001                            Skills/Tools)           ║
 ║                                                                          ║
 ║  Description:                                                            ║
 ║  The tool 'execute_command' exposes arbitrary shell command execution.   ║
@@ -152,18 +152,18 @@ priority: P1
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║  OWASP AST10 COVERAGE — my-server audit                                  ║
 ║  ──────────────────────────────────────────────────────────────────────  ║
-║  AST01  Prompt Injection               ✓ Covered (0 findings)            ║
-║  AST02  Indirect Prompt Injection      ✓ Covered (2 findings)            ║
-║  AST03  Over-Privileged Skills         ✓ Covered (1 finding)             ║
-║  AST04  SSRF                           ✓ Covered (1 finding)             ║
-║  AST05  Data Exfiltration              ✓ Covered (0 findings)            ║
+║  AST01  Malicious Skills/Tools         ✓ Covered (3 findings)            ║
+║  AST02  Excessive Data Exposure        ✓ Covered (1 finding)             ║
+║  AST03  Over-Privileged Skills         ✓ Covered (2 findings)            ║
+║  AST04  Insecure Metadata              ✓ Covered (1 finding)             ║
+║  AST05  Inadequate Authentication      ✓ Covered (1 finding)             ║
 ║  AST06  Weak Isolation                 ✓ Covered (1 finding)             ║
-║  AST07  Insufficient Auth              ✓ Covered (1 finding)             ║
-║  AST08  Resource Exhaustion            ○ Not Applicable                  ║
-║  AST09  Supply Chain                   ✓ Covered (1 finding)             ║
-║  AST10  Sensitive Data Exposure        ✓ Covered (0 findings)            ║
+║  AST07  Update Drift                   ~ Partial (schema-drift rule)     ║
+║  AST08  Data Poisoning                 — N/A (process-only)              ║
+║  AST09  Supply Chain                   — N/A (process-only)              ║
+║  AST10  Unmonitored Agent Behavior     — N/A (process-only)              ║
 ║                                                                          ║
-║  Coverage: 83% (9/10 — 1 N/A excluded)                                  ║
+║  Runtime coverage: 6/6 (100%) ✓ PASS  (AST07 partial; target ≥83%)     ║
 ║  [ Esc: Back ]                                                           ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```

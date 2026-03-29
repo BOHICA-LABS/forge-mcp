@@ -33,17 +33,19 @@ removal_reason: null
 
 ## Property Statement
 
-When multiple clients share a pooled MCP server connection through the daemon, three isolation guarantees hold:
+When multiple clients share a pooled MCP server connection through the daemon, three isolation guarantees MUST hold:
 
-1. **Session Isolation (no cross-talk):** A response from server S is delivered *only* to the client whose session originated the corresponding request. No message from server A ever leaks to a client subscribed exclusively to server B.
+1. **Session Isolation (no cross-talk):** A response from server S MUST be delivered *only* to the client whose session originated the corresponding request. A message from server A MUST NOT leak to a client subscribed exclusively to server B.
 
-2. **Server-Initiated Callback Routing:** Server-initiated requests (sampling, elicitation, progress notifications, `list_changed` events) arriving on a pooled connection are routed to the correct client session based on the session's registered capabilities. Specifically:
-   - A sampling request targets only the client that advertised sampling capability for that server connection.
-   - An elicitation request targets only the client that advertised elicitation capability.
-   - A `list_changed` notification is delivered to *all* clients sharing that server connection (broadcast semantic).
-   - A progress notification with a known `progressToken` routes to the client that initiated the originating request.
+2. **Server-Initiated Callback Routing:** Server-initiated requests (sampling, elicitation, progress notifications, `list_changed` events) arriving on a pooled connection MUST be routed to the correct client session based on the session's registered capabilities. Specifically:
+   - A sampling request MUST target only the client that advertised sampling capability for that server connection.
+   - An elicitation request MUST target only the client that advertised elicitation capability.
+   - A `list_changed` notification MUST be delivered to *all* clients sharing that server connection (broadcast semantic).
+   - A progress notification with a known `progressToken` MUST route to the client that initiated the originating request.
 
-3. **Connection Lifecycle Independence:** Disconnecting client C₁ from the daemon does not corrupt, drop, or misroute in-flight messages for any other client C₂…Cₙ sharing the same pooled server connection. The pooled server connection itself remains live as long as at least one client references it.
+3. **Connection Lifecycle Independence:** Disconnecting client C₁ from the daemon MUST NOT corrupt, drop, or misroute in-flight messages for any other client C₂…Cₙ sharing the same pooled server connection. The pooled server connection itself MUST remain live as long as at least one client references it.
+
+This is a **session isolation** property: the daemon's multiplexing layer MUST maintain strict request/response correlation and capability-based routing across all concurrent clients.
 
 ## Source Contract
 
@@ -293,9 +295,9 @@ fn all_clients_disconnect_releases_server() {
 | Complexity | Medium — routing table is a pure HashMap-based structure; callbacks add capability-based dispatch |
 | Tool support | proptest handles HashMap+enum state well; tokio test runtime supports async integration tests |
 | Decomposition | Session routing logic can be extracted as a pure `SessionRouter` struct separate from socket I/O |
-| Time | Seconds (proptest), minutes (integration tests with mock server) |
-| Risk | Architecture must enforce the pure/effectful split — routing logic in pure core, socket handling in effectful shell. If routing is entangled with I/O, refactor required. |
-| Verdict | **FEASIBLE** — requires extracting `SessionRouter` as pure core during implementation |
+| Expected time | Seconds (proptest), minutes (integration tests with mock server) |
+| Risk | Architecture MUST enforce the pure/effectful split — routing logic in pure core, socket handling in effectful shell. If routing is entangled with I/O, refactor required. |
+| Verdict | **FEASIBLE** |
 
 ## Integration Test Companion
 
