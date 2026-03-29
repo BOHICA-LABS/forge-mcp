@@ -1,12 +1,12 @@
 ---
 document_type: domain-spec-index
 level: L2
-version: "1.0"
+version: "1.1"
 status: draft
 producer: business-analyst
-timestamp: 2026-03-29T10:55:00
+timestamp: 2026-03-29T11:05:00
 phase: 1a
-inputs: [product-brief.md, market-intel.md]
+inputs: [product-brief.md, market-intel.md, domain-research]
 input-hash: ""
 traces_to: .factory/planning/product-brief.md
 sections:
@@ -19,6 +19,7 @@ sections:
   - risks.md
   - failure-modes.md
   - differentiators.md
+  - reconciliation-notes.md
 ---
 
 # L2 Domain Specification: Forge MCP
@@ -27,10 +28,11 @@ sections:
 > Detail lives in per-section files listed below. Each section targets
 > 800–1,200 tokens for optimal LLM consumption.
 
-> **Note:** Domain research (`.factory/planning/domain-research.md`) was not yet
-> available when this spec was produced. Primary inputs were the approved product
-> brief (v1.1) and market intelligence assessment. Domain research findings should
-> be reconciled when available.
+> **v1.1 — Post-domain-research reconciliation.** This version incorporates
+> findings from MCP protocol research (spec details, rmcp SDK API surface,
+> OWASP AST10 categories, MCP security research including BlueRock/Equixly
+> CVE evidence, and competitive tool analysis). See `reconciliation-notes.md`
+> for a summary of all changes.
 
 ## Domain Summary
 
@@ -44,15 +46,16 @@ DevEx engineers, agent developers, security teams, and MCP server authors.
 
 | Section | File | Est. Tokens | Primary Consumer | Purpose |
 |---------|------|-------------|-----------------|---------|
-| Domain Capabilities | capabilities.md | ~1100 | product-owner, architect, story-writer | CAP-NNN capability catalog (25 atomic capabilities) |
-| Domain Entities | entities.md | ~1000 | architect, product-owner, ux-designer | Entity model with attributes and relationships |
-| Domain Invariants | invariants.md | ~1000 | product-owner, architect | DI-NNN business rules (15 invariants) |
-| Domain Events | events.md | ~950 | architect | Event triggers, preconditions, outcomes |
-| Edge Cases | edge-cases.md | ~1000 | story-writer, test-writer | DEC-NNN domain-level edge cases (15 cases) |
-| Assumptions | assumptions.md | ~1000 | product-owner, test-writer | ASM-NNN with validation methods (12 assumptions) |
-| Risks | risks.md | ~1100 | product-owner, architect | R-NNN risk register (12 risks) |
-| Failure Modes | failure-modes.md | ~1000 | architect, test-writer | FM-NNN runtime failure catalog (15 modes) |
-| Differentiators | differentiators.md | ~900 | product-owner | Competitive differentiator → CAP-NNN mapping |
+| Domain Capabilities | capabilities.md | ~1200 | product-owner, architect, story-writer | CAP-NNN capability catalog (25 atomic capabilities) |
+| Domain Entities | entities.md | ~1400 | architect, product-owner, ux-designer | Entity model with attributes and relationships (expanded with client/server capability distinction, sampling, elicitation, roots, tasks) |
+| Domain Invariants | invariants.md | ~1200 | product-owner, architect | DI-NNN business rules (18 invariants, +3 for client capabilities) |
+| Domain Events | events.md | ~1200 | architect | Event triggers, preconditions, outcomes (expanded with server-initiated events) |
+| Edge Cases | edge-cases.md | ~1200 | story-writer, test-writer | DEC-NNN domain-level edge cases (19 cases, +4 for server-initiated methods) |
+| Assumptions | assumptions.md | ~1200 | product-owner, test-writer | ASM-NNN with validation methods (13 assumptions, +1, 2 partially validated) |
+| Risks | risks.md | ~1300 | product-owner, architect | R-NNN risk register (13 risks, +1 for client capability complexity) |
+| Failure Modes | failure-modes.md | ~1200 | architect, test-writer | FM-NNN runtime failure catalog (18 modes, +3 for server-initiated methods) |
+| Differentiators | differentiators.md | ~1000 | product-owner | Competitive differentiator → CAP-NNN mapping (refined with research evidence) |
+| Reconciliation Notes | reconciliation-notes.md | ~800 | all | Summary of domain research reconciliation changes |
 
 ## Cross-References
 
@@ -63,6 +66,8 @@ DevEx engineers, agent developers, security teams, and MCP server authors.
 | Story decomposition input | capabilities.md + edge-cases.md |
 | Holdout scenario generation | assumptions.md + risks.md + failure-modes.md |
 | NFR derivation | risks.md + failure-modes.md |
+| Client capability implementation | entities.md (Sampling Request, Elicitation Request, Root, Task) + invariants.md (DI-016, DI-017, DI-018) + edge-cases.md (DEC-016–DEC-019) + failure-modes.md (FM-016–FM-018) |
+| Security rule development | entities.md (Security Finding) + edge-cases.md (DEC-018) + differentiators.md (Differentiator 1) + risks.md (R-004, R-011) |
 | Full domain review (adversary/spec-reviewer) | ALL sections |
 
 ## ID Registry Summary
@@ -70,11 +75,11 @@ DevEx engineers, agent developers, security teams, and MCP server authors.
 | ID Format | Count | Section |
 |-----------|-------|---------|
 | CAP-NNN | 25 | capabilities.md |
-| DI-NNN | 15 | invariants.md |
-| DEC-NNN | 15 | edge-cases.md |
-| ASM-NNN | 12 | assumptions.md |
-| R-NNN | 12 | risks.md |
-| FM-NNN | 15 | failure-modes.md |
+| DI-NNN | 18 | invariants.md |
+| DEC-NNN | 19 | edge-cases.md |
+| ASM-NNN | 13 | assumptions.md |
+| R-NNN | 13 | risks.md |
+| FM-NNN | 18 | failure-modes.md |
 
 ## Priority Distribution
 
@@ -98,3 +103,13 @@ DevEx engineers, agent developers, security teams, and MCP server authors.
 | 8 | Protocol conformance testing | CAP-019, CAP-020 |
 | 9 | Config sync and drift detection | CAP-021, CAP-022 |
 | 10 | Server comparison and diff | CAP-023, CAP-024, CAP-025 |
+
+## Key Changes in v1.1 (Domain Research Reconciliation)
+
+1. **Client vs. Server capability distinction** — MCP separates server capabilities (tools, resources, prompts, logging, completions, tasks) from client capabilities (roots, sampling, elicitation, tasks). Forge MCP must advertise and handle client capabilities.
+2. **rmcp SDK confirmed** — `warpdotdev/rmcp` with `ClientCapabilitiesBuilder` and `ServerCapabilities` structs. Community-maintained (by Warp), not directly Anthropic.
+3. **OWASP AST10 categories enumerated** — All 10 categories identified; ~6 are runtime-detectable.
+4. **Security research corpus** — BlueRock/Equixly CVEs, 36.7% SSRF rate, known attack vectors documented.
+5. **Spec cadence faster than assumed** — ~6 months between updates (not 12).
+6. **Streamable HTTP replaces deprecated SSE** — Transport correction.
+7. **New entities, invariants, edge cases, failure modes, assumptions, risks** added for server-initiated methods.

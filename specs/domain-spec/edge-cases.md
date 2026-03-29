@@ -2,12 +2,12 @@
 document_type: domain-spec-section
 level: L2
 section: edge-cases
-version: "1.0"
+version: "1.1"
 status: draft
 producer: business-analyst
-timestamp: 2026-03-29T10:55:00
+timestamp: 2026-03-29T11:05:00
 phase: 1a
-inputs: [product-brief.md, market-intel.md]
+inputs: [product-brief.md, market-intel.md, domain-research]
 input-hash: ""
 traces_to: L2-INDEX.md
 ---
@@ -18,12 +18,15 @@ traces_to: L2-INDEX.md
 > Edge cases are valid but unusual scenarios that the system must handle
 > gracefully. Each DEC defines the scenario, expected behavior, and which
 > capabilities it stresses.
+> **v1.1 — Updated from domain research reconciliation.** Added DEC-016 through
+> DEC-019 for server-initiated method edge cases (sampling, elicitation, SSRF
+> detection, task lifecycle).
 
 ## Connection Edge Cases
 
 **DEC-001 — Server crashes mid-request.** A server process terminates (SIGKILL, OOM, unhandled panic) while Forge MCP is waiting for a JSON-RPC response. Expected: Pending request times out or detects EOF, ConnectionLost event fires, session status transitions to error, user sees clear error message (not a hang). Health monitor records the failure. Stresses: CAP-002, CAP-013, FM-002.
 
-**DEC-002 — Server sends malformed JSON-RPC.** Server responds with invalid JSON or valid JSON that does not conform to JSON-RPC 2.0 (missing id, wrong version field, non-object response). Expected: Message rejected at protocol layer (rmcp), error logged with raw content for debugging, session remains active for subsequent valid messages. Traffic capture records the malformed message for inspection. Stresses: CAP-009, DI-004, ASM-003.
+**DEC-002 — Server sends malformed JSON-RPC.** Server responds with invalid JSON or valid JSON that does not conform to JSON-RPC 2.0 (missing id, wrong version field, non-object response). Expected: Message rejected at protocol layer (rmcp), error logged with raw content for debugging, session remains active for subsequent valid messages. Traffic capture records the malformed message for inspection. Domain research confirms this is common — even Anthropic's own MCP servers had implementation defects (CVE-2025-68145). Stresses: CAP-009, DI-004, ASM-003.
 
 **DEC-003 — Capability mismatch between client and server.** Server advertises a capability during negotiation but returns errors when that capability is exercised (e.g., claims tools support but returns "method not found" for tools/list). Expected: Error surfaced to user with clear context ("server advertised tools but tools/list failed"), capability marked as unreliable in session state. Security auditor may flag this as suspicious (DEC-012). Stresses: CAP-004, CAP-005, DI-002.
 
@@ -56,3 +59,13 @@ traces_to: L2-INDEX.md
 **DEC-014 — Server disconnects during conformance test run.** Server crashes or network fails partway through a conformance suite. Expected: Completed tests retain their results. Remaining tests are marked as skip with reason "connection lost". Suite produces partial results with clear indication of incompleteness. Stresses: CAP-019, CAP-020, FM-002.
 
 **DEC-015 — Comparing servers with different protocol versions.** One server runs MCP 2025-11-25, the other runs 2024-11-05. Comparison reveals capabilities that only exist in the newer spec. Expected: Diff report clearly attributes differences to protocol version vs. server implementation. Capabilities absent due to older spec are labeled as "not available in protocol version X" rather than "missing." Stresses: CAP-004, CAP-023, CAP-024.
+
+## Server-Initiated Method Edge Cases (new)
+
+**DEC-016 — Server sends sampling request but no LLM provider configured.** Server requires client sampling to function, sends a sampling request, but Forge MCP has no LLM API key/provider configured for proxying. Expected: Return a protocol-level error to the server indicating sampling is unavailable. Display clear user-facing message in TUI/CLI: "Server requested LLM sampling but no LLM provider is configured." Do not crash or hang. If sampling was advertised during negotiation, this represents a configuration gap — warn at connection time if sampling is advertised but no provider is set. Stresses: CAP-005, DI-016, DI-017, ASM-013.
+
+**DEC-017 — Server sends elicitation request in non-interactive CLI mode.** Server sends an elicitation request (form or URL) while Forge MCP is running in non-interactive CLI mode (piped stdout, no TTY). Expected: Cannot display form or open URL interactively. Return a protocol-level error to the server. Log the elicitation request details to stderr for debugging. If the request is URL-based, optionally print the URL to stderr so the user can handle it manually. Stresses: CAP-005, CAP-011, DI-017, ASM-013.
+
+**DEC-018 — SSRF attempt via tool response containing private IP.** A server's tool response includes a resource URI or redirect pointing to a private IP address (e.g., 169.254.169.254 cloud metadata, 10.x.x.x, 192.168.x.x). Expected: Security auditor flags as high-confidence SSRF finding (confidence ≥ 0.9 for metadata endpoint, ≥ 0.7 for other RFC1918 addresses). Finding mapped to AST03 (Over-Privileged) or AST06 (Weak Isolation). Evidence includes the specific URI and message context. This is a deterministic detection — not heuristic. Domain research: 36.7% of 7,000+ scanned MCP servers were vulnerable to SSRF (BlueRock). Stresses: CAP-016, CAP-017, DI-010, DI-011.
+
+**DEC-019 — Long-running task exceeds client timeout.** Server starts a task (status: working) that runs for minutes or hours, exceeding any reasonable client-side timeout. Expected: Task status is trackable independently of request timeout. Client can poll task status, cancel the task, or disconnect and reconnect to check status later (if session persists via daemon). TUI shows task progress indicator. CLI `--wait` flag with configurable timeout. Stresses: CAP-005, CAP-003.

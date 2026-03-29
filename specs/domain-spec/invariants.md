@@ -2,12 +2,12 @@
 document_type: domain-spec-section
 level: L2
 section: invariants
-version: "1.0"
+version: "1.1"
 status: draft
 producer: business-analyst
-timestamp: 2026-03-29T10:55:00
+timestamp: 2026-03-29T11:05:00
 phase: 1a
-inputs: [product-brief.md, market-intel.md]
+inputs: [product-brief.md, market-intel.md, domain-research]
 input-hash: ""
 traces_to: L2-INDEX.md
 ---
@@ -17,16 +17,27 @@ traces_to: L2-INDEX.md
 > **Sharded L2 section (DF-021).** Navigate via `L2-INDEX.md`.
 > Domain invariants are business rules that must hold at all times during system
 > operation. Violation of any DI is a defect.
+> **v1.1 — Updated from domain research reconciliation.** Added DI-016 through
+> DI-018 for client capability advertisement, server-initiated method handling,
+> and Streamable HTTP transport. Refined DI-002 and DI-004 with rmcp specifics.
 
 ## Connection and Protocol Invariants
 
 **DI-001 — Capability negotiation before method invocation.** A server connection must complete capability negotiation before any tool calls, resource reads, or other protocol methods are dispatched. Rationale: The MCP spec requires initialize/initialized handshake before any other messages. Violation would produce undefined server behavior. Traces to: CAP-002, CAP-004.
 
-**DI-002 — Protocol method gated by negotiated capabilities.** A protocol method must not be invoked on a server that did not advertise the corresponding capability during negotiation. Example: tool/call must not be sent to a server that did not declare tools capability. Rationale: Prevents protocol violations and confusing error states. Traces to: CAP-004, CAP-005.
+**DI-002 — Protocol method gated by negotiated capabilities.** A protocol method must not be invoked on a server that did not advertise the corresponding capability during negotiation. This applies bidirectionally: client must not send `tools/call` to a server without tools capability, and client must not process sampling requests from a server if the client did not advertise sampling capability. In rmcp, server capabilities are exposed via `ServerCapabilities` struct fields (tools, resources, prompts, logging, completions, tasks). Rationale: Prevents protocol violations and confusing error states. Traces to: CAP-004, CAP-005.
 
 **DI-003 — Session identity uniqueness.** Each named session must have a unique identifier within the daemon's session pool. No two active sessions may share the same session ID. Rationale: Prevents cross-session message routing errors. Traces to: CAP-003.
 
-**DI-004 — Transport managed by rmcp only.** Forge MCP must not implement custom transport-layer protocol logic. All JSON-RPC framing, message serialization, and transport management must be delegated to the rmcp SDK. Rationale: Hard constraint from product brief — custom protocol code is the primary risk in existing tools. Traces to: CAP-002, ASM-001.
+**DI-004 — Transport managed by rmcp only.** Forge MCP must not implement custom transport-layer protocol logic. All JSON-RPC framing, message serialization, and transport management must be delegated to the rmcp SDK (`warpdotdev/rmcp`). This includes stdio pipe management and Streamable HTTP bidirectional streaming. Rationale: Hard constraint from product brief — custom protocol code is the primary risk in existing tools (mcp-probe and mcpeek both rolled their own protocol). Traces to: CAP-002, ASM-001.
+
+## Client Capability Invariants (new)
+
+**DI-016 — Client capabilities must be explicitly advertised.** Forge MCP must advertise all client capabilities it supports (sampling, elicitation, roots) during the initialize handshake via `ClientCapabilitiesBuilder`. A server may depend on these client capabilities for its functionality — failing to advertise sampling means servers cannot delegate LLM inference, failing to advertise roots means servers cannot query filesystem boundaries. Rationale: Incomplete client capability advertisement causes silent feature loss. Traces to: CAP-004, CAP-005.
+
+**DI-017 — Server-initiated methods require handler registration.** For every client capability advertised, Forge MCP must register a handler before completing the initialized notification. If sampling is advertised, a sampling handler (proxying to external LLM) must be ready. If elicitation is advertised, a user-input handler must be ready. Unhandled server-initiated requests violate the protocol contract. Rationale: Advertising a capability without handling it causes server-side errors. Traces to: CAP-005.
+
+**DI-018 — Streamable HTTP is the only remote transport.** Forge MCP must support Streamable HTTP (not deprecated SSE) for HTTP-based connections. The SSE transport from MCP 2024-11-05 is deprecated and must not be implemented as a primary path. Rationale: Streamable HTTP is the current spec transport; SSE compatibility is at rmcp's discretion. Traces to: CAP-002.
 
 ## Traffic Inspection Invariants
 
@@ -46,7 +57,7 @@ traces_to: L2-INDEX.md
 
 **DI-010 — Findings require evidence.** Every security finding must include the specific JSON-RPC message or pattern that triggered the detection. Findings without evidence must not be emitted. Rationale: Actionability — security teams need evidence to triage. Traces to: CAP-016, CAP-017.
 
-**DI-011 — Confidence score bounds.** Security finding confidence scores must be in the range [0.0, 1.0] inclusive. A score of 1.0 indicates deterministic detection (e.g., known-dangerous tool name); lower scores indicate heuristic matches. Rationale: Bounded scores enable consistent threshold-based filtering. Traces to: CAP-016.
+**DI-011 — Confidence score bounds.** Security finding confidence scores must be in the range [0.0, 1.0] inclusive. A score of 1.0 indicates deterministic detection (e.g., known-dangerous tool name, SSRF to 169.254.169.254); lower scores indicate heuristic matches. Rationale: Bounded scores enable consistent threshold-based filtering. Traces to: CAP-016.
 
 **DI-012 — Suppression is explicit and auditable.** Suppressed security findings must retain their original severity and evidence. Suppression is an overlay, not a deletion. All suppressions must be traceable to a user action. Rationale: Compliance auditability. Traces to: CAP-018.
 

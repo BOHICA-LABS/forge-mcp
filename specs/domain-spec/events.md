@@ -2,12 +2,12 @@
 document_type: domain-spec-section
 level: L2
 section: events
-version: "1.0"
+version: "1.1"
 status: draft
 producer: business-analyst
-timestamp: 2026-03-29T10:55:00
+timestamp: 2026-03-29T11:05:00
 phase: 1a
-inputs: [product-brief.md, market-intel.md]
+inputs: [product-brief.md, market-intel.md, domain-research]
 input-hash: ""
 traces_to: L2-INDEX.md
 ---
@@ -17,6 +17,8 @@ traces_to: L2-INDEX.md
 > **Sharded L2 section (DF-021).** Navigate via `L2-INDEX.md`.
 > Domain events represent significant state changes in the system. Each event
 > has a trigger, preconditions, and downstream effects.
+> **v1.1 — Updated from domain research reconciliation.** Added Server-Initiated
+> Method Events section covering sampling, elicitation, and task lifecycle.
 
 ## Connection Lifecycle Events
 
@@ -26,7 +28,7 @@ traces_to: L2-INDEX.md
 
 **ConnectionEstablished** — Transport layer reports successful connection. Trigger: rmcp transport handshake completes. Precondition: ConnectionRequested was issued. Outcome: Server status transitions to connecting, capability negotiation begins. Consumers: Session manager. Traces to: CAP-002.
 
-**CapabilityNegotiated** — MCP initialize/initialized handshake completes. Trigger: Server responds to initialize request. Precondition: ConnectionEstablished. Outcome: Negotiated capabilities stored on session, server status transitions to connected, protocol methods become available. Consumers: TUI capability explorer, CLI info command, traffic inspector. Traces to: CAP-004.
+**CapabilityNegotiated** — MCP initialize/initialized handshake completes. Trigger: Server responds to initialize request. Precondition: ConnectionEstablished. Outcome: Both server capabilities (tools, resources, prompts, logging, completions, tasks) and client capabilities (roots, sampling, elicitation) are stored on session. Server status transitions to connected. Protocol methods and server-initiated request handlers become available. Consumers: TUI capability explorer, CLI info command, traffic inspector. Traces to: CAP-004.
 
 **ConnectionLost** — Transport reports unexpected disconnection. Trigger: EOF on stdio, HTTP connection dropped, or heartbeat timeout. Precondition: Session was active. Outcome: Server status transitions to error, pending requests fail, daemon may schedule reconnect. Consumers: Health monitor (error rate), TUI status display, alert system. Traces to: CAP-002, FM-002.
 
@@ -36,11 +38,19 @@ traces_to: L2-INDEX.md
 
 ## Traffic Events
 
-**MessageCaptured** — A JSON-RPC message is observed on a session's transport. Trigger: Any message sent or received on an active session. Precondition: Traffic capture is enabled for the session. Outcome: Message appended to traffic capture with timestamp. Consumers: Traffic inspector, health metric collector, security auditor. Traces to: CAP-009.
+**MessageCaptured** — A JSON-RPC message is observed on a session's transport. Trigger: Any message sent or received on an active session (including server-initiated sampling/elicitation requests). Precondition: Traffic capture is enabled for the session. Outcome: Message appended to traffic capture with timestamp and direction tag. Consumers: Traffic inspector, health metric collector, security auditor. Traces to: CAP-009.
 
 **TrafficFilterApplied** — User applies or changes a filter on captured traffic. Trigger: User enters filter criteria (method, direction, time range, pattern). Precondition: Traffic capture contains messages. Outcome: Filtered view computed and displayed; underlying capture unchanged (DI-006). Consumers: TUI traffic panel, CLI grep command. Traces to: CAP-010.
 
 **MessageReplayed** — A captured message sequence is sent to a target server. Trigger: User initiates replay command with explicit target. Precondition: Capture exists, target server is connected (DI-007). Outcome: Messages dispatched to target, responses captured separately. Consumers: Debugging workflow. Traces to: CAP-010.
+
+## Server-Initiated Method Events (new)
+
+**SamplingRequested** — Server sends a sampling/createMessage request to the client. Trigger: Server needs LLM inference to complete its operation. Precondition: Client advertised sampling capability during negotiation (DI-016). Outcome: Forge MCP proxies the request to configured external LLM API. If no LLM provider configured, returns error to server (DEC-016). On success, returns sampling result to server. Traffic capture records both the request and the proxied response. Consumers: Traffic inspector, TUI sampling indicator, security auditor (may flag suspicious sampling patterns). Traces to: CAP-005, DI-017, FM-016.
+
+**ElicitationRequested** — Server sends an elicitation request asking for user input. Trigger: Server needs user credentials, OAuth, or interactive input. Precondition: Client advertised elicitation capability (DI-016). Outcome: In TUI mode, display form or URL to user. In CLI mode, return error to server (DEC-017). On user response, forward input to server. On timeout, return timeout error (FM-017). Consumers: TUI elicitation panel, traffic inspector. Traces to: CAP-005, DI-017.
+
+**TaskStatusChanged** — A server task transitions between states. Trigger: Server sends task status update (working → completed, working → failed, working → input_required, etc.). Precondition: Task was initiated via a method invocation. Outcome: Task status updated in session state. TUI shows progress indicator. CLI with `--wait` flag checks for completion. Consumers: TUI task panel, CLI wait logic. Traces to: CAP-005, DEC-019.
 
 ## Health Monitoring Events
 
@@ -52,7 +62,7 @@ traces_to: L2-INDEX.md
 
 ## Security Events
 
-**SecurityFindingDetected** — Runtime analysis identifies a security concern. Trigger: Traffic pattern matches a dangerous behavior rule. Precondition: Security auditing is active and message has been analyzed. Outcome: Finding created with severity, OWASP AST10 category, evidence, and confidence score. Consumers: TUI security panel, CLI audit report, compliance report generator. Traces to: CAP-016, CAP-017, DI-010.
+**SecurityFindingDetected** — Runtime analysis identifies a security concern. Trigger: Traffic pattern matches a dangerous behavior rule (e.g., SSRF to 169.254.169.254, dangerous tool invocation, permission escalation). Precondition: Security auditing is active and message has been analyzed. Outcome: Finding created with severity, OWASP AST10 category (AST01-AST10), evidence, and confidence score. Deterministic detections (metadata IP, known-dangerous tool names) get confidence ≥ 0.9; heuristic detections get lower scores. Consumers: TUI security panel, CLI audit report, compliance report generator. Traces to: CAP-016, CAP-017, DI-010.
 
 **SecurityFindingSuppressed** — User suppresses a finding as accepted risk. Trigger: Explicit user action (suppress command with reason). Precondition: Finding exists and is not already suppressed. Outcome: Finding retains severity and evidence but is marked suppressed with user attribution (DI-012). Consumers: Compliance report (shows suppressed findings separately). Traces to: CAP-018.
 

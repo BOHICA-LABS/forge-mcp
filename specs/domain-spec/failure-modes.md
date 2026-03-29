@@ -2,12 +2,12 @@
 document_type: domain-spec-section
 level: L2
 section: failure-modes
-version: "1.0"
+version: "1.1"
 status: draft
 producer: business-analyst
-timestamp: 2026-03-29T10:55:00
+timestamp: 2026-03-29T11:05:00
 phase: 1a
-inputs: [product-brief.md, market-intel.md]
+inputs: [product-brief.md, market-intel.md, domain-research]
 input-hash: ""
 traces_to: L2-INDEX.md
 ---
@@ -17,6 +17,9 @@ traces_to: L2-INDEX.md
 > **Sharded L2 section (DF-021).** Navigate via `L2-INDEX.md`.
 > Failure modes describe how the system fails and how it should recover.
 > Grouped by subsystem.
+> **v1.1 — Updated from domain research reconciliation.** Added FM-016 through
+> FM-018 for sampling proxy failure, elicitation handler failure, and SSRF
+> false positive suppression exhaustion.
 
 ## Connection Subsystem
 
@@ -57,3 +60,11 @@ traces_to: L2-INDEX.md
 ## Security Subsystem
 
 **FM-015 — Heuristic rule load failure.** Security heuristic rules fail to load (corrupted file, incompatible version). Symptoms: Security auditing is non-functional — no findings generated. Detection: Rule loading returns error. Recovery: Report which rules failed to load and why. Continue with successfully loaded rules. If zero rules load, disable security auditing with clear warning rather than producing false sense of security. Severity: degraded security coverage, non-blocking. Traces to: CAP-016.
+
+## Server-Initiated Method Subsystem (new)
+
+**FM-016 — Sampling proxy LLM API failure.** Server sends a sampling request, Forge MCP attempts to proxy to configured LLM API, but the API call fails (auth error, rate limit, network failure, model not found). Symptoms: Sampling request hangs or errors. Detection: LLM API returns error response or times out. Recovery: Return structured error to server via protocol (not a crash). Log the specific API error to stderr/TUI. If rate-limited, suggest retry after delay. Display in TUI traffic inspector as a failed server-initiated request. Severity: degrades server functionality that depends on sampling, recoverable. Traces to: CAP-005, DI-017, ASM-013.
+
+**FM-017 — Elicitation handler timeout.** Server sends elicitation request (form-based), user does not respond within a reasonable time, or TUI is not focused. Symptoms: Server is blocked waiting for user input. Detection: Configurable timeout on elicitation display. Recovery: Return timeout error to server. Display notification that an elicitation request timed out. In CLI mode, this is always an immediate failure (DEC-017). Severity: server function blocked, recoverable. Traces to: CAP-005, DI-017, DEC-017.
+
+**FM-018 — SSRF detection false positive storm.** A legitimate server's tool responses frequently reference private IPs (e.g., internal service mesh with 10.x.x.x addresses). Security auditor generates excessive findings. Symptoms: Security finding list overwhelmed with similar low-value findings. Detection: Finding count for same pattern exceeds configurable threshold (e.g., >10 identical SSRF findings per session). Recovery: Auto-suggest suppression rule for the specific pattern after threshold. Group repeated identical findings in UI rather than listing individually. Preserve all findings in underlying data but collapse in display. Severity: UX degradation of security feature, non-blocking. Traces to: CAP-016, CAP-018, DI-012, DEC-018.
