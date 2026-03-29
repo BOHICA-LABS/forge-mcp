@@ -1,6 +1,17 @@
+# Rust
+/target/
+Cargo.lock
+
+# Factory
 .factory/
 .factory-project/
 .worktrees/
+
+# Env
 .env
 .env.local
 *.bak
+
+# OS
+.DS_Store
+Thumbs.db
