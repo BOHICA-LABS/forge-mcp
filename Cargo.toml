@@ -11,6 +11,7 @@ members = [
     "crates/forge-conformance",
     "crates/forge-tui",
     "crates/forge-mcp",
+    "tests/forge-test-server",
 ]
 
 [workspace.package]
@@ -35,7 +36,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # MCP protocol (forge-core only)
-rmcp = { version = "1", features = ["client", "server"] }
+rmcp = { version = "1", features = ["client", "server", "transport-io", "transport-child-process"] }
 
 # TUI (forge-tui only)
 ratatui = "0.30"
