@@ -1,0 +1,28 @@
+[package]
+name = "forge-test-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Configurable mock MCP server for forge-mcp integration tests"
+
+[[bin]]
+name = "forge-test-server"
+path = "src/main.rs"
+
+[lib]
+name = "forge_test_server_lib"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+rmcp = { workspace = true }
+clap = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+serde_json = { workspace = true }
