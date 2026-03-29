@@ -20,7 +20,7 @@ introduced: v0.1.0
 
 ## Summary
 
-Handles `elicitation/create` requests from MCP servers. In TUI mode, renders a form or opens a URL for user input. In CLI mode, rejects the request since there is no interactive user. Handles timeouts for unresponsive users.
+Handles `elicitation/create` requests from MCP servers per MCP 2025-11-25 elicitation spec. In TUI mode, renders a form (form mode) or presents a URL for user consent (URL mode). In CLI mode, behavior depends on the `--non-interactive` flag: when set (or when no TTY is detected), form-mode requests are declined with `action: "decline"`; otherwise CLI prompts on stdin for simple text inputs. Handles timeouts for unresponsive users. Uses the MCP-canonical three-action response model: `accept`, `decline`, `cancel`.
 
 ## Preconditions
 

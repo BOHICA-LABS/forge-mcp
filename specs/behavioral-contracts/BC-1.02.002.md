@@ -31,7 +31,7 @@ Establishes a connection to an MCP server via Streamable HTTP transport. Connect
 
 ## Postconditions
 
-- POST-001: An HTTP client connection is established to the configured URL using Streamable HTTP transport (not deprecated SSE).
+- POST-001: An HTTP client connection is established to the configured URL using Streamable HTTP transport (single-endpoint POST model per MCP 2025-11-25, not the deprecated HTTP+SSE dual-endpoint model). Note: `/sse`-style legacy endpoint paths are non-compliant unless the server exposes the 2025-11-25 single-endpoint Streamable HTTP semantics at that path.
 - POST-002: If the server returns a `Mcp-Session-Id` header in the initialize response, it is stored and sent with all subsequent requests.
 - POST-003: Custom `headers` from the config are included in every HTTP request to the server.
 - POST-004: The MCP `initialize` request is sent and a valid `InitializeResult` is received.
@@ -64,7 +64,7 @@ Establishes a connection to an MCP server via Streamable HTTP transport. Connect
 
 | ID | Input | Expected Output |
 |----|-------|-----------------|
-| TV-001 | `url: "https://mcp.example.com/sse", headers: {"Authorization": "Bearer tok123"}` | Connection established, initialize handshake completes, `Mcp-Session-Id` stored if returned |
+| TV-001 | `url: "https://mcp.example.com/mcp", headers: {"Authorization": "Bearer tok123"}` | Connection established, initialize handshake completes, `Mcp-Session-Id` stored if returned |
 | TV-002 | Server returns `Mcp-Session-Id: sess-abc-123` | Session ID stored, subsequent requests include `Mcp-Session-Id: sess-abc-123` header |
 
 ### Edge Case

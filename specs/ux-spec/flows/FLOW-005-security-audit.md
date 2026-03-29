@@ -2,10 +2,12 @@
 document_type: ux-spec-flow
 flow_id: FLOW-005
 flow_name: Security Audit Workflow
-version: "1.0"
+version: "1.1"
 status: draft
 producer: ux-designer
 timestamp: 2026-03-29T14:15:00
+revised: 2026-03-29
+revision_reason: ADV-P1-003 — align suppression UX with BC-7.18.002 overlay semantics
 phase: 1c
 traces_to: UX-INDEX.md
 screens: [SCR-001, SCR-002, SCR-004, SCR-007]
@@ -58,12 +60,17 @@ priority: P1
        │  User decides finding is a false positive; presses u
        ▼
   SCR-007: Suppress dialog
-           User enters reason, selects scope
+           Shows finding ID, severity, confidence
+           User enters reason (required), selects scope
+           Dialog note: "Finding stays in report as suppressed: true"
            Presses Enter to confirm
        │
        ▼
-  SCR-007: Finding suppressed; removed from default view
-           "(N suppressed)" count in footer
+  SCR-007: Finding suppressed
+           Active view count decreases by 1
+           Footer updates: "N active [M suppressed — V:show]"
+           Finding is NOT deleted — preserved in audit data with suppressed:true
+           Press V at any time to review suppressed findings
        │
        │  User presses ? (AST10 map)
        ▼
@@ -101,8 +108,8 @@ priority: P1
 | 8 | SCR-007 | `i` or `Enter` to view detail | Finding detail: severity, confidence, category, evidence, recommendation |
 | 9 | SCR-007 | `Esc` to return to list | List view restored |
 | 10 | SCR-007 | Navigate to a false-positive finding | Row highlighted |
-| 11 | SCR-007 | `u` to suppress | Suppress dialog opens |
-| 12 | SCR-007 | Enter reason; select scope; `Enter` to confirm | Finding suppressed; removed from list; footer count updates |
+| 11 | SCR-007 | `u` to suppress | Suppress dialog opens (shows severity, confidence; prompts for required reason + scope) |
+| 12 | SCR-007 | Enter reason; select scope; `Enter` to confirm | Finding marked suppressed:true in audit data; moves to suppressed view; active count decrements; footer shows "[M suppressed — V:show]" |
 | 13 | SCR-007 | `?` to view AST10 map | OWASP coverage map shown |
 | 14 | SCR-007 | `Esc` to return | Findings list |
 | 15 | SCR-007 | `E` to export | Export dialog opens |
@@ -113,9 +120,10 @@ priority: P1
 ## Success Path
 
 After step 16:
-- Report exported to chosen output
+- Report exported to chosen output; export includes ALL findings — active and suppressed — with `suppressed: true` field set on suppressed entries
 - Findings list remains visible for continued investigation
-- Suppressed findings are gone from default list; accessible via filter `suppressed`
+- Suppressed findings are **not deleted** from the active view — they are moved to the suppressed view accessible via `V` key
+- Footer always shows current suppressed count: "N active [M suppressed — V:show]"
 - Status bar shows last audit timestamp
 
 ---
