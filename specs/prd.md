@@ -328,73 +328,73 @@ pull attacks on live traffic.
 
 | BC ID | Source (L2 CAP) | Module(s) | Priority | Test Type |
 |-------|----------------|-----------|----------|-----------|
-| BC-1.01.001 | CAP-001 | [architect] | P0 | unit/integration |
-| BC-1.01.002 | CAP-001 | [architect] | P0 | unit/property |
-| BC-1.01.003 | CAP-001 | [architect] | P0 | integration |
-| BC-1.02.001 | CAP-002 | [architect] | P0 | integration |
-| BC-1.02.002 | CAP-002 | [architect] | P0 | integration |
-| BC-1.02.003 | CAP-002 | [architect] | P0 | integration |
-| BC-1.03.001 | CAP-003 | [architect] | P0 | integration |
-| BC-1.03.002 | CAP-003 | [architect] | P0 | integration |
-| BC-1.03.003 | CAP-003 | [architect] | P0 | integration |
-| BC-2.04.001 | CAP-004 | [architect] | P0 | integration/property |
-| BC-2.04.002 | CAP-004 | [architect] | P0 | integration |
-| BC-2.04.003 | CAP-004 | [architect] | P0 | integration |
-| BC-2.05.001 | CAP-005 | [architect] | P0 | integration/property |
-| BC-2.05.002 | CAP-005 | [architect] | P0 | integration |
-| BC-2.05.003 | CAP-005 | [architect] | P0 | integration |
-| BC-2.05.004 | CAP-005 | [architect] | P0 | integration |
-| BC-2.05.005 | CAP-005 | [architect] | P0 | integration |
-| BC-2.05.006 | CAP-005 | [architect] | P0 | unit |
-| BC-2.05.007 | CAP-005 | [architect] | P0 | integration |
-| BC-2.05.008 | CAP-005 | [architect] | P0 | integration |
-| BC-2.05.009 | CAP-005 | [architect] | P0 | integration |
-| BC-2.05.010 | CAP-005 | [architect] | P0 | unit/property |
-| BC-3.06.001 | CAP-006 | [architect] | P0 | integration/manual |
-| BC-3.06.002 | CAP-006 | [architect] | P0 | unit |
-| BC-3.07.001 | CAP-007 | [architect] | P0 | integration |
-| BC-3.07.002 | CAP-007 | [architect] | P0 | integration |
-| BC-3.07.003 | CAP-007 | [architect] | P0 | integration |
-| BC-3.08.001 | CAP-008 | [architect] | P0 | unit/integration |
-| BC-3.08.002 | CAP-008 | [architect] | P0 | unit |
-| BC-3.08.003 | CAP-008 | [architect] | P0 | integration |
-| BC-3.08.004 | CAP-008 | [architect] | P0 | integration |
-| BC-3.08.005 | CAP-008 | [architect] | P0 | manual/audit |
-| BC-4.09.001 | CAP-009 | [architect] | P0 | integration/property |
-| BC-4.09.002 | CAP-009 | [architect] | P0 | unit |
-| BC-4.09.003 | CAP-009 | [architect] | P0 | unit/property |
-| BC-4.10.001 | CAP-010 | [architect] | P0 | unit/integration |
-| BC-4.10.002 | CAP-010 | [architect] | P0 | unit |
-| BC-4.10.003 | CAP-010 | [architect] | P0 | integration |
-| BC-5.11.001 | CAP-011 | [architect] | P0 | integration |
-| BC-5.11.002 | CAP-011 | [architect] | P0 | unit/property |
-| BC-5.11.003 | CAP-011 | [architect] | P0 | unit |
-| BC-5.12.001 | CAP-012 | [architect] | P0 | unit/integration |
-| BC-5.12.002 | CAP-012 | [architect] | P0 | integration |
-| BC-6.13.001 | CAP-013 | [architect] | P0 | unit/integration |
-| BC-6.13.002 | CAP-013 | [architect] | P0 | unit |
-| BC-6.14.001 | CAP-014 | [architect] | P0 | unit |
-| BC-6.14.002 | CAP-014 | [architect] | P0 | unit/property |
-| BC-6.15.001 | CAP-015 | [architect] | P0 | integration/manual |
-| BC-6.15.002 | CAP-015 | [architect] | P0 | unit |
-| BC-7.16.001 | CAP-016 | [architect] | P1 | unit/integration |
-| BC-7.16.002 | CAP-016 | [architect] | P1 | unit/property |
-| BC-7.16.003 | CAP-016 | [architect] | P1 | integration |
-| BC-7.16.004 | CAP-016 | [architect] | P1 | unit |
-| BC-7.17.001 | CAP-017 | [architect] | P1 | integration |
-| BC-7.17.002 | CAP-017 | [architect] | P1 | integration |
-| BC-7.17.003 | CAP-017 | [architect] | P1 | integration |
-| BC-7.18.001 | CAP-018 | [architect] | P1 | unit/integration |
-| BC-7.18.002 | CAP-018 | [architect] | P1 | unit |
-| BC-7.18.003 | CAP-018 | [architect] | P1 | unit |
-| BC-8.19.001 | CAP-019 | [architect] | P1 | integration |
-| BC-8.19.002 | CAP-019 | [architect] | P1 | integration |
-| BC-8.19.003 | CAP-019 | [architect] | P1 | integration |
-| BC-8.20.001 | CAP-020 | [architect] | P1 | unit |
-| BC-8.20.002 | CAP-020 | [architect] | P1 | unit |
-| BC-9.21.001 | CAP-021 | [architect] | P1 | unit/integration |
-| BC-9.21.002 | CAP-021 | [architect] | P1 | unit |
-| BC-9.22.001 | CAP-022 | [architect] | P2 | integration |
-| BC-10.23.001 | CAP-023 | [architect] | P2 | unit/integration |
-| BC-10.24.001 | CAP-024 | [architect] | P2 | unit |
-| BC-10.25.001 | CAP-025 | [architect] | P2 | integration |
+| BC-1.01.001 | CAP-001 | forge-discovery | P0 | unit/integration |
+| BC-1.01.002 | CAP-001 | forge-discovery | P0 | unit/property |
+| BC-1.01.003 | CAP-001 | forge-discovery | P0 | integration |
+| BC-1.02.001 | CAP-002 | forge-core, forge-daemon | P0 | integration |
+| BC-1.02.002 | CAP-002 | forge-core, forge-daemon | P0 | integration |
+| BC-1.02.003 | CAP-002 | forge-core, forge-daemon | P0 | integration |
+| BC-1.03.001 | CAP-003 | forge-daemon | P0 | integration |
+| BC-1.03.002 | CAP-003 | forge-daemon | P0 | integration |
+| BC-1.03.003 | CAP-003 | forge-daemon | P0 | integration |
+| BC-2.04.001 | CAP-004 | forge-core | P0 | integration/property |
+| BC-2.04.002 | CAP-004 | forge-core | P0 | integration |
+| BC-2.04.003 | CAP-004 | forge-core | P0 | integration |
+| BC-2.05.001 | CAP-005 | forge-core | P0 | integration/property |
+| BC-2.05.002 | CAP-005 | forge-core | P0 | integration |
+| BC-2.05.003 | CAP-005 | forge-core | P0 | integration |
+| BC-2.05.004 | CAP-005 | forge-core | P0 | integration |
+| BC-2.05.005 | CAP-005 | forge-core | P0 | integration |
+| BC-2.05.006 | CAP-005 | forge-core | P0 | unit |
+| BC-2.05.007 | CAP-005 | forge-core | P0 | integration |
+| BC-2.05.008 | CAP-005 | forge-core | P0 | integration |
+| BC-2.05.009 | CAP-005 | forge-core | P0 | integration |
+| BC-2.05.010 | CAP-005 | forge-core | P0 | unit/property |
+| BC-3.06.001 | CAP-006 | forge-tui | P0 | integration/manual |
+| BC-3.06.002 | CAP-006 | forge-tui | P0 | unit |
+| BC-3.07.001 | CAP-007 | forge-tui | P0 | integration |
+| BC-3.07.002 | CAP-007 | forge-tui | P0 | integration |
+| BC-3.07.003 | CAP-007 | forge-tui | P0 | integration |
+| BC-3.08.001 | CAP-008 | forge-tui | P0 | unit/integration |
+| BC-3.08.002 | CAP-008 | forge-tui, forge-health | P0 | unit |
+| BC-3.08.003 | CAP-008 | forge-tui, forge-discovery | P0 | integration |
+| BC-3.08.004 | CAP-008 | forge-tui, forge-core | P0 | integration |
+| BC-3.08.005 | CAP-008 | forge-tui | P0 | manual/audit |
+| BC-4.09.001 | CAP-009 | forge-traffic | P0 | integration/property |
+| BC-4.09.002 | CAP-009 | forge-traffic | P0 | unit |
+| BC-4.09.003 | CAP-009 | forge-traffic | P0 | unit/property |
+| BC-4.10.001 | CAP-010 | forge-traffic | P0 | unit/integration |
+| BC-4.10.002 | CAP-010 | forge-traffic | P0 | unit |
+| BC-4.10.003 | CAP-010 | forge-traffic, forge-core | P0 | integration |
+| BC-5.11.001 | CAP-011 | forge-mcp | P0 | integration |
+| BC-5.11.002 | CAP-011 | forge-mcp | P0 | unit/property |
+| BC-5.11.003 | CAP-011 | forge-mcp | P0 | unit |
+| BC-5.12.001 | CAP-012 | forge-mcp | P0 | unit/integration |
+| BC-5.12.002 | CAP-012 | forge-mcp | P0 | integration |
+| BC-6.13.001 | CAP-013 | forge-health | P0 | unit/integration |
+| BC-6.13.002 | CAP-013 | forge-health | P0 | unit |
+| BC-6.14.001 | CAP-014 | forge-health | P0 | unit |
+| BC-6.14.002 | CAP-014 | forge-health | P0 | unit/property |
+| BC-6.15.001 | CAP-015 | forge-tui, forge-health | P0 | integration/manual |
+| BC-6.15.002 | CAP-015 | forge-health, forge-mcp | P0 | unit |
+| BC-7.16.001 | CAP-016 | forge-security | P1 | unit/integration |
+| BC-7.16.002 | CAP-016 | forge-security | P1 | unit/property |
+| BC-7.16.003 | CAP-016 | forge-security | P1 | integration |
+| BC-7.16.004 | CAP-016 | forge-security | P1 | unit |
+| BC-7.17.001 | CAP-017 | forge-security | P1 | integration |
+| BC-7.17.002 | CAP-017 | forge-security | P1 | integration |
+| BC-7.17.003 | CAP-017 | forge-security | P1 | integration |
+| BC-7.18.001 | CAP-018 | forge-security | P1 | unit/integration |
+| BC-7.18.002 | CAP-018 | forge-security | P1 | unit |
+| BC-7.18.003 | CAP-018 | forge-security | P1 | unit |
+| BC-8.19.001 | CAP-019 | forge-conformance | P1 | integration |
+| BC-8.19.002 | CAP-019 | forge-conformance | P1 | integration |
+| BC-8.19.003 | CAP-019 | forge-conformance | P1 | integration |
+| BC-8.20.001 | CAP-020 | forge-conformance | P1 | unit |
+| BC-8.20.002 | CAP-020 | forge-conformance | P1 | unit |
+| BC-9.21.001 | CAP-021 | forge-config | P1 | unit/integration |
+| BC-9.21.002 | CAP-021 | forge-config | P1 | unit |
+| BC-9.22.001 | CAP-022 | forge-config | P2 | integration |
+| BC-10.23.001 | CAP-023 | forge-config | P2 | unit/integration |
+| BC-10.24.001 | CAP-024 | forge-config | P2 | unit |
+| BC-10.25.001 | CAP-025 | forge-config, forge-core | P2 | integration |
