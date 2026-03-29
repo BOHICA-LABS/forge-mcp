@@ -1,0 +1,6 @@
+.factory/
+.factory-project/
+.worktrees/
+.env
+.env.local
+*.bak
