@@ -11,7 +11,9 @@ members = [
     "crates/forge-conformance",
     "crates/forge-tui",
     "crates/forge-mcp",
+    # Test fixtures (not part of production binary)
     "tests/forge-test-server",
+    "tests/forge-test-http-server",
 ]
 
 [workspace.package]

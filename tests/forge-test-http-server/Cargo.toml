@@ -1,0 +1,30 @@
+[package]
+name = "forge-test-http-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Mock MCP HTTP server fixture for integration tests (STORY-003)"
+
+[[bin]]
+name = "forge-test-http-server"
+path = "src/main.rs"
+
+[dependencies]
+rmcp = { version = "1", features = [
+    "server",
+    "transport-streamable-http-server",
+] }
+tokio = { workspace = true }
+axum = "0.8"
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+tokio-util = { version = "0.7" }
+futures-core = "0.3"
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json", "stream"] }
+tokio = { workspace = true }
