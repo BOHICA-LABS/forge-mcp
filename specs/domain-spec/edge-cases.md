@@ -2,7 +2,7 @@
 document_type: domain-spec-section
 level: L2
 section: edge-cases
-version: "1.1"
+version: "1.2"
 status: draft
 producer: business-analyst
 timestamp: 2026-03-29T11:05:00
@@ -69,3 +69,17 @@ traces_to: L2-INDEX.md
 **DEC-018 — SSRF attempt via tool response containing private IP.** A server's tool response includes a resource URI or redirect pointing to a private IP address (e.g., 169.254.169.254 cloud metadata, 10.x.x.x, 192.168.x.x). Expected: Security auditor flags as high-confidence SSRF finding (confidence ≥ 0.9 for metadata endpoint, ≥ 0.7 for other RFC1918 addresses). Finding mapped to AST03 (Over-Privileged) or AST06 (Weak Isolation). Evidence includes the specific URI and message context. This is a deterministic detection — not heuristic. Domain research: 36.7% of 7,000+ scanned MCP servers were vulnerable to SSRF (BlueRock). Stresses: CAP-016, CAP-017, DI-010, DI-011.
 
 **DEC-019 — Long-running task exceeds client timeout.** Server starts a task (status: working) that runs for minutes or hours, exceeding any reasonable client-side timeout. Expected: Task status is trackable independently of request timeout. Client can poll task status, cancel the task, or disconnect and reconnect to check status later (if session persists via daemon). TUI shows task progress indicator. CLI `--wait` flag with configurable timeout. Stresses: CAP-005, CAP-003.
+
+## Pagination and List Edge Cases (new)
+
+**DEC-020 — Server returns inconsistent pagination cursors.** Server provides a `nextCursor` that returns an empty page or loops back to a previous page (infinite pagination). Expected: Detect empty-page termination (no items returned = stop iterating). Detect cursor loops via cursor deduplication set. Cap maximum pagination iterations (configurable, default 100 pages). Report pagination anomaly to user. Stresses: CAP-005, DI-019.
+
+**DEC-021 — Tool list changes mid-pagination.** Server sends `notifications/tools/list_changed` while Forge MCP is still paginating through `tools/list`. Expected: Complete current pagination, then re-fetch from the beginning. Display the freshest complete list. Do not merge partial old results with partial new results. Stresses: CAP-005, DI-019.
+
+## JSON-RPC Edge Cases (new)
+
+**DEC-022 — Batch JSON-RPC response ordering.** Server returns batch responses in a different order than the requests were sent. Expected: Match responses to requests by `id` field, not by position. Display in request order in traffic inspector but record actual wire order. Handle mixed batch (some requests, some notifications — notifications get no response). Stresses: CAP-009, CAP-010.
+
+**DEC-023 — Tool returns isError but no JSON-RPC error.** A `tools/call` response has `result.isError: true` (tool-level failure) but the JSON-RPC response itself is successful (no `error` field). Expected: Health metrics count this as a tool error, not a protocol error. Traffic inspector displays it distinctly from protocol errors (different color/badge). Security auditor may analyze tool error content for information leakage. Stresses: CAP-005, CAP-013, CAP-016, DI-020.
+
+**DEC-024 — Server sends progress notifications for cancelled request.** Client cancels a request via `notifications/cancelled`, but server continues sending `notifications/progress` for that request ID. Expected: Silently ignore progress notifications for cancelled request IDs. Do not display stale progress. Log if verbose mode is enabled. Stresses: CAP-005, CAP-009.

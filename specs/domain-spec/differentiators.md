@@ -2,7 +2,7 @@
 document_type: domain-spec-section
 level: L2
 section: differentiators
-version: "1.1"
+version: "1.2"
 status: draft
 producer: business-analyst
 timestamp: 2026-03-29T11:05:00
@@ -28,7 +28,7 @@ traces_to: L2-INDEX.md
 
 **Market evidence:** 36.7% of 7,000+ analyzed MCP servers vulnerable to SSRF (BlueRock "MCP fURI" research). OWASP AST10 (Dec 2025) explicitly recommends behavioral analysis pipelines beyond static pattern matching. Active supply chain attacks occurring (npm impersonation). Real-world CVEs confirm the threat: CVE-2025-68145/68143/68144 (Anthropic Git/Filesystem MCP servers RCE), CVE-2025-6515 (oatpp-mcp prompt hijacking). BlueRock MCP Trust Registry scans 7,500+ servers with rule-based approaches, confirming viability.
 
-**Supporting capabilities:** CAP-016 (dangerous pattern detection — SSRF, file access, code execution, exfiltration), CAP-017 (permission/auth verification — AST03 Over-Privileged, AST06 Weak Isolation), CAP-018 (compliance report generation). Built on: CAP-009 (traffic capture provides the data feed).
+**Supporting capabilities:** CAP-016 (dangerous pattern detection — SSRF, file access, code execution, exfiltration), CAP-017 (permission/auth verification — AST03 Over-Privileged, AST06 Weak Isolation), CAP-018 (compliance report generation), CAP-023 (tool schema diff — enables rug pull / schema drift detection, a known attack vector where servers swap benign descriptions for malicious ones post-approval). Built on: CAP-009 (traffic capture provides the data feed).
 
 **Defensibility:** HIGH for 12–18 months. Requires deep MCP protocol understanding + heuristic development. Domain research confirms substantial corpus of deterministic detection patterns (metadata IPs, RFC1918 targeting, known-dangerous tool names) that provide a high-precision baseline.
 

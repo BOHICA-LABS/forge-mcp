@@ -2,7 +2,7 @@
 document_type: domain-spec-section
 level: L2
 section: events
-version: "1.1"
+version: "1.2"
 status: draft
 producer: business-analyst
 timestamp: 2026-03-29T11:05:00
@@ -63,6 +63,8 @@ traces_to: L2-INDEX.md
 ## Security Events
 
 **SecurityFindingDetected** — Runtime analysis identifies a security concern. Trigger: Traffic pattern matches a dangerous behavior rule (e.g., SSRF to 169.254.169.254, dangerous tool invocation, permission escalation). Precondition: Security auditing is active and message has been analyzed. Outcome: Finding created with severity, OWASP AST10 category (AST01-AST10), evidence, and confidence score. Deterministic detections (metadata IP, known-dangerous tool names) get confidence ≥ 0.9; heuristic detections get lower scores. Consumers: TUI security panel, CLI audit report, compliance report generator. Traces to: CAP-016, CAP-017, DI-010.
+
+**SchemaDriftDetected** — Tool, resource, or prompt metadata has changed since the last connection to a server. Trigger: Capability metadata hash comparison on connection detects differences. Precondition: Server was previously connected and metadata hashes were stored. Outcome: Security finding generated with metadata diff evidence. If the change was announced via `list_changed` notification, finding severity is lower (info/medium). If the change was silent (no notification), finding severity is higher (high) — potential rug pull attack (FM-020). Consumers: Security auditor, TUI security panel, traffic inspector. Traces to: CAP-016, CAP-023, FM-020, R-014.
 
 **SecurityFindingSuppressed** — User suppresses a finding as accepted risk. Trigger: Explicit user action (suppress command with reason). Precondition: Finding exists and is not already suppressed. Outcome: Finding retains severity and evidence but is marked suppressed with user attribution (DI-012). Consumers: Compliance report (shows suppressed findings separately). Traces to: CAP-018.
 

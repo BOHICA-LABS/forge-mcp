@@ -2,7 +2,7 @@
 document_type: domain-spec-section
 level: L2
 section: failure-modes
-version: "1.1"
+version: "1.2"
 status: draft
 producer: business-analyst
 timestamp: 2026-03-29T11:05:00
@@ -68,3 +68,13 @@ traces_to: L2-INDEX.md
 **FM-017 — Elicitation handler timeout.** Server sends elicitation request (form-based), user does not respond within a reasonable time, or TUI is not focused. Symptoms: Server is blocked waiting for user input. Detection: Configurable timeout on elicitation display. Recovery: Return timeout error to server. Display notification that an elicitation request timed out. In CLI mode, this is always an immediate failure (DEC-017). Severity: server function blocked, recoverable. Traces to: CAP-005, DI-017, DEC-017.
 
 **FM-018 — SSRF detection false positive storm.** A legitimate server's tool responses frequently reference private IPs (e.g., internal service mesh with 10.x.x.x addresses). Security auditor generates excessive findings. Symptoms: Security finding list overwhelmed with similar low-value findings. Detection: Finding count for same pattern exceeds configurable threshold (e.g., >10 identical SSRF findings per session). Recovery: Auto-suggest suppression rule for the specific pattern after threshold. Group repeated identical findings in UI rather than listing individually. Preserve all findings in underlying data but collapse in display. Severity: UX degradation of security feature, non-blocking. Traces to: CAP-016, CAP-018, DI-012, DEC-018.
+
+## Pagination Subsystem (new)
+
+**FM-019 — Infinite pagination loop.** Server returns pagination cursors that cycle, causing Forge MCP to loop indefinitely on a list method. Symptoms: `tools/list` or `resources/list` never completes, memory grows from accumulated results. Detection: Cursor deduplication set detects repeated cursor, or page count exceeds configured maximum (default 100). Recovery: Terminate pagination, return results accumulated so far, warn user that server pagination may be broken. Report as conformance issue if conformance testing is active. Severity: request-level, recoverable. Traces to: CAP-005, DI-019, DEC-020.
+
+## Protocol Subsystem (new)
+
+**FM-020 — Rug pull attack — server changes tool schemas post-approval.** Server presents benign tool descriptions during initial review/approval, then swaps to malicious versions in subsequent connections. Symptoms: Tool descriptions differ between connections without explicit `tools/list_changed` notification, or schemas change subtly. Detection: Schema drift detection — hash tool descriptions at first connection, compare on subsequent connections. Alert when tool metadata changes without notification. Recovery: Flag as security finding (high confidence, maps to AST04 Insecure Metadata or AST07 Update Drift). Display diff of changed metadata. Require user re-approval for changed tools. Severity: security concern, non-blocking but high-priority alert. Traces to: CAP-016, CAP-023, DEC-012.
+
+**FM-021 — Streamable HTTP session loss.** HTTP transport loses the `Mcp-Session-Id` due to server restart or session expiry. Subsequent requests are rejected or routed to a new session without state. Symptoms: Methods fail with session errors, previously negotiated capabilities are lost. Detection: Server returns session-related error or capabilities change unexpectedly. Recovery: Re-initialize the session (new `initialize`/`initialized` handshake). Preserve local state (captures, metrics) across reconnection. Warn user that session was re-established. Severity: session-level, recoverable. Traces to: CAP-002, CAP-003.

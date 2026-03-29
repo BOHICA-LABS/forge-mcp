@@ -2,7 +2,7 @@
 document_type: domain-spec-section
 level: L2
 section: entities
-version: "1.1"
+version: "1.2"
 status: draft
 producer: business-analyst
 timestamp: 2026-03-29T11:05:00
@@ -31,7 +31,11 @@ An active connection session between Forge MCP and an MCP server. Attributes: se
 
 ## Transport Connection
 
-The underlying communication channel to an MCP server. Types: stdio (manages child process with stdin/stdout pipes) and Streamable HTTP (replaces the deprecated SSE transport; uses HTTP for bidirectional streaming with JSON-RPC 2.0). Attributes: transport type, connection state, bytes sent/received, error count. Managed by the rmcp SDK (`warpdotdev/rmcp`) — Forge MCP does not implement transport logic.
+The underlying communication channel to an MCP server. Types:
+- **stdio**: Manages child process with stdin/stdout pipes. Client writes JSON-RPC to server's stdin, reads from stdout. Server must not write non-protocol data to stdout (use stderr for logging). UTF-8 encoded, newline-delimited messages. Best for local/dev, single-client scenarios.
+- **Streamable HTTP**: Replaces the deprecated SSE transport from MCP 2024-11-05. Server exposes a single MCP endpoint URL. Client sends JSON-RPC as HTTP POST; server responds with either single JSON response (`application/json`) or SSE stream (`text/event-stream`) for multi-message responses. Client can GET the endpoint for server-initiated message streams. Supports `Mcp-Session-Id` header for session binding and `Last-Event-ID` for stream resumption.
+
+Attributes: transport type, connection state, bytes sent/received, error count, session ID (HTTP only). Managed by the rmcp SDK (`warpdotdev/rmcp`) — Forge MCP does not implement transport logic. rmcp also supports TCP transport for direct socket connections.
 
 ## Negotiated Capabilities
 
@@ -74,9 +78,17 @@ A client-defined URI or filesystem boundary that tells the server what scope of 
 
 A long-running server operation tracked by ID. Tasks enable async workflows where the server starts work that may take significant time. Attributes: task ID, status (working | input_required | completed | failed | cancelled), progress information, result. Both client and server can declare task capability. Clients can query task status and cancel tasks. Added to MCP in the November 2025 spec update.
 
+## Resource Subscription
+
+A client subscription to change notifications for a specific resource. Created via `resources/subscribe`, removed via `resources/unsubscribe`. Server sends `notifications/resources/updated` when a subscribed resource changes. Attributes: resource URI, subscription status (active | inactive), server reference, session reference. Requires the server to advertise `resources` capability with `subscribe: true`. Enables reactive UIs that update when server-side data changes.
+
+## Paginated List Response
+
+A response to a list method (`tools/list`, `resources/list`, `prompts/list`) that may contain a subset of results with a cursor for fetching more. Attributes: items (the returned entries), next cursor (opaque string, absent when no more results). Forge MCP must handle pagination transparently — iterating cursors until exhausted to present complete lists. Cursor format is server-defined and opaque.
+
 ## JSON-RPC Message
 
-A single protocol message exchanged between client and server. Attributes: message ID, method name, direction (client→server | server→client), params/result/error payload, timestamp (capture time), latency (time to response for request/response pairs), raw JSON content. Messages follow JSON-RPC 2.0 framing as mandated by MCP. Direction matters because some methods are server-initiated (sampling, elicitation) while most are client-initiated.
+A single protocol message exchanged between client and server. Four types per JSON-RPC 2.0: **Request** (has `id`, expects response), **Response** (has `id`, exactly one of `result` or `error`), **Notification** (no `id`, fire-and-forget), **Batch** (JSON array of requests/notifications — server processes independently, responses may arrive in any order). Attributes: message ID (String | Number | null for requests/responses; absent for notifications), method name, direction (client→server | server→client), params/result/error payload, timestamp (capture time), latency (time to response for request/response pairs), raw JSON content, is_batch flag. Messages follow JSON-RPC 2.0 framing as mandated by MCP. Direction matters because some methods are server-initiated (sampling, elicitation) while most are client-initiated. MCP error codes: standard JSON-RPC (-32700 through -32603) plus implementation-defined server errors (-32000 to -32099). Tool execution errors use `result.isError: true` (not JSON-RPC error codes).
 
 ## Traffic Capture
 
@@ -96,7 +108,15 @@ Known MCP attack vectors from domain research: SSRF (36.7% of 7,000+ scanned ser
 
 ## Config Source
 
-A file on disk containing MCP server configuration for a specific editor/IDE. Types: Claude Desktop, Cursor, VS Code, Windsurf. Attributes: file path, editor type, parse status (valid | invalid | missing), server entries extracted, last modified timestamp. Config sources are read-only — Forge MCP inspects but does not modify them.
+A file on disk containing MCP server configuration for a specific editor/IDE. Types: Claude Desktop, Cursor, VS Code, Windsurf. Attributes: file path, editor type, schema type (`mcpServers` for Claude Desktop/Cursor/Windsurf, `servers` with explicit `type` field for VS Code), parse status (valid | invalid | missing), server entries extracted, last modified timestamp. Config sources are read-only — Forge MCP inspects but does not modify them.
+
+Config file paths vary by OS and editor:
+- **Claude Desktop**: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS), `%APPDATA%\Claude\claude_desktop_config.json` (Windows), `~/.config/Claude/claude_desktop_config.json` (Linux).
+- **Cursor**: `~/.cursor/mcp.json` (global), `.cursor/mcp.json` (project-scoped).
+- **VS Code**: `~/Library/Application Support/Code/User/mcp.json` (macOS user), `.vscode/mcp.json` (workspace). Uses `"servers"` top-level key (not `"mcpServers"`), explicit `"type": "stdio"|"http"` field.
+- **Windsurf**: `~/.codeium/windsurf/mcp_config.json`. Supports environment variable interpolation.
+
+Editor-specific extensions: Cursor supports `"disabled"` (bool) and `"alwaysAllow"` (tool name array). VS Code supports IntelliSense schema validation and input variables for secrets.
 
 ## Conformance Test
 

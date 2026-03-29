@@ -2,7 +2,7 @@
 document_type: domain-spec-section
 level: L2
 section: capabilities
-version: "1.1"
+version: "1.2"
 status: draft
 producer: business-analyst
 timestamp: 2026-03-29T11:05:00
@@ -22,7 +22,7 @@ traces_to: L2-INDEX.md
 
 ## Brief Capability 1: Server Discovery and Connection Management
 
-**CAP-001 — Config Import and Parsing.** Parse MCP server configuration from Claude Desktop (`claude_desktop_config.json`), Cursor (`~/.cursor/mcp.json`), VS Code (`settings.json` MCP section), and Windsurf config files. Normalize heterogeneous config formats into a unified internal server registry. Priority: P0.
+**CAP-001 — Config Import and Parsing.** Parse MCP server configuration from Claude Desktop (`claude_desktop_config.json`), Cursor (`~/.cursor/mcp.json` global or `.cursor/mcp.json` project-scoped), VS Code (`mcp.json` — user-level or `.vscode/mcp.json` workspace-scoped), and Windsurf (`~/.codeium/windsurf/mcp_config.json`). Must handle two distinct JSON schemas: the `"mcpServers"` top-level key (Claude Desktop, Cursor, Windsurf) and the `"servers"` top-level key with explicit `"type"` field (VS Code). Normalize heterogeneous config formats into a unified internal server registry. Priority: P0.
 
 **CAP-002 — Transport Connection.** Establish connections to MCP servers via stdio and Streamable HTTP transports using the rmcp SDK (`warpdotdev/rmcp`). Streamable HTTP replaces the deprecated SSE transport and uses HTTP for bidirectional streaming with JSON-RPC 2.0. Manage connection lifecycle including handshake, capability negotiation, keepalive, and graceful shutdown. Priority: P0.
 
@@ -32,7 +32,7 @@ traces_to: L2-INDEX.md
 
 **CAP-004 — Capability Negotiation.** Perform bidirectional capability negotiation per MCP 2025-11-25 spec. MCP distinguishes **server capabilities** (tools, resources, prompts, logging, completions, tasks, extensions, experimental) from **client capabilities** (roots, sampling, elicitation, tasks, extensions, experimental). Forge MCP must advertise appropriate client capabilities to enable server-initiated features like sampling and elicitation. Gracefully degrade when connecting to servers on older spec versions (2024-11-05). In rmcp, capabilities are built via `ClientCapabilitiesBuilder` with fluent `enable_*()` methods (e.g., `enable_sampling()`, `enable_roots()`, `enable_elicitation()`). Priority: P0.
 
-**CAP-005 — Protocol Method Invocation.** Invoke any MCP protocol method through a unified dispatch interface. Client-initiated methods: `tools/call`, `resources/read`, `resources/list`, `prompts/get`, `prompts/list`, `completions/complete`, `logging/setLevel`. Server-initiated methods (handled by client): sampling requests (proxy to external LLM APIs with tool calling and parallel calls support), elicitation requests (form-based or URL-based user input), `roots/list` queries. Handle the extensions system for non-standard capabilities and tasks for long-running operations. Priority: P0.
+**CAP-005 — Protocol Method Invocation.** Invoke any MCP protocol method through a unified dispatch interface (~25 distinct method names per MCP spec). Client-initiated methods: `tools/call`, `tools/list`, `resources/read`, `resources/list`, `resources/subscribe`, `resources/unsubscribe`, `prompts/get`, `prompts/list`, `completion/complete`, `logging/setLevel`, `ping`. Server-initiated methods (handled by client): `sampling/createMessage` (proxy to external LLM APIs with tool calling and parallel calls support), `elicitation/create` (form-based or URL-based user input), `roots/list` queries. Handle notifications bidirectionally: client→server (`notifications/initialized`, `notifications/roots/list_changed`, `notifications/cancelled`, `notifications/progress`) and server→client (`notifications/resources/list_changed`, `notifications/resources/updated`, `notifications/tools/list_changed`, `notifications/prompts/list_changed`, `notifications/message` for logging, `notifications/progress`, `notifications/cancelled`). Handle the extensions system for non-standard capabilities and tasks for long-running operations. Support cursor-based pagination for list methods (`tools/list`, `resources/list`, `prompts/list`). Priority: P0.
 
 ## Brief Capability 3: Interactive TUI Dashboard
 

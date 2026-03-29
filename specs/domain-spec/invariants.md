@@ -2,7 +2,7 @@
 document_type: domain-spec-section
 level: L2
 section: invariants
-version: "1.1"
+version: "1.2"
 status: draft
 producer: business-analyst
 timestamp: 2026-03-29T11:05:00
@@ -66,6 +66,12 @@ traces_to: L2-INDEX.md
 **DI-013 — JSON on stdout, diagnostics on stderr.** In CLI mode, structured data output (JSON) must go exclusively to stdout. Human-readable messages, progress indicators, and diagnostics must go exclusively to stderr. Rationale: Unix philosophy — enables clean piping and programmatic consumption. Traces to: CAP-011, CAP-012.
 
 **DI-014 — Exit code semantics.** Exit codes must follow documented semantics: 0 = success, 1 = test failure (conformance), 2 = connection error. Exit codes must not vary by output format or verbosity level. Rationale: CI/CD systems depend on predictable exit codes. Traces to: CAP-011, CAP-020.
+
+## Pagination and List Invariants
+
+**DI-019 — List methods must exhaust pagination.** When displaying or reporting tool, resource, or prompt lists, Forge MCP must iterate all pagination cursors until no `nextCursor` is returned. Partial list results must never be presented as complete. Rationale: Servers may paginate results at arbitrary page sizes; displaying only the first page would miss tools/resources. Traces to: CAP-005.
+
+**DI-020 — Tool execution errors are not JSON-RPC errors.** Tool execution failures are returned as successful JSON-RPC responses with `result.isError: true` in the content, not as JSON-RPC error objects. Forge MCP must distinguish between protocol-level errors (JSON-RPC error codes) and tool-level errors (`isError` flag) in traffic display, health metrics, and security analysis. Rationale: Conflating the two leads to incorrect error rate metrics and misleading security findings. Traces to: CAP-005, CAP-009, CAP-013.
 
 ## Config Invariants
 

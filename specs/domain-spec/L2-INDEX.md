@@ -1,7 +1,7 @@
 ---
 document_type: domain-spec-index
 level: L2
-version: "1.1"
+version: "1.2"
 status: draft
 producer: business-analyst
 timestamp: 2026-03-29T11:05:00
@@ -28,11 +28,14 @@ sections:
 > Detail lives in per-section files listed below. Each section targets
 > 800–1,200 tokens for optimal LLM consumption.
 
-> **v1.1 — Post-domain-research reconciliation.** This version incorporates
-> findings from MCP protocol research (spec details, rmcp SDK API surface,
-> OWASP AST10 categories, MCP security research including BlueRock/Equixly
-> CVE evidence, and competitive tool analysis). See `reconciliation-notes.md`
-> for a summary of all changes.
+> **v1.2 — Full domain research reconciliation.** This version incorporates
+> comprehensive findings from MCP protocol research including: complete JSON-RPC
+> method enumeration (~25 methods), dual config schema support (`mcpServers` vs
+> `servers`), cursor-based pagination, batch JSON-RPC, tool error semantics
+> (`isError` vs JSON-RPC errors), resource subscriptions, notification inventory,
+> progress/cancellation protocol, rug pull attack patterns, Streamable HTTP
+> session management, and per-editor config file paths. See
+> `reconciliation-notes.md` for a summary of all changes.
 
 ## Domain Summary
 
@@ -46,16 +49,16 @@ DevEx engineers, agent developers, security teams, and MCP server authors.
 
 | Section | File | Est. Tokens | Primary Consumer | Purpose |
 |---------|------|-------------|-----------------|---------|
-| Domain Capabilities | capabilities.md | ~1200 | product-owner, architect, story-writer | CAP-NNN capability catalog (25 atomic capabilities) |
-| Domain Entities | entities.md | ~1400 | architect, product-owner, ux-designer | Entity model with attributes and relationships (expanded with client/server capability distinction, sampling, elicitation, roots, tasks) |
-| Domain Invariants | invariants.md | ~1200 | product-owner, architect | DI-NNN business rules (18 invariants, +3 for client capabilities) |
-| Domain Events | events.md | ~1200 | architect | Event triggers, preconditions, outcomes (expanded with server-initiated events) |
-| Edge Cases | edge-cases.md | ~1200 | story-writer, test-writer | DEC-NNN domain-level edge cases (19 cases, +4 for server-initiated methods) |
-| Assumptions | assumptions.md | ~1200 | product-owner, test-writer | ASM-NNN with validation methods (13 assumptions, +1, 2 partially validated) |
-| Risks | risks.md | ~1300 | product-owner, architect | R-NNN risk register (13 risks, +1 for client capability complexity) |
-| Failure Modes | failure-modes.md | ~1200 | architect, test-writer | FM-NNN runtime failure catalog (18 modes, +3 for server-initiated methods) |
-| Differentiators | differentiators.md | ~1000 | product-owner | Competitive differentiator → CAP-NNN mapping (refined with research evidence) |
-| Reconciliation Notes | reconciliation-notes.md | ~800 | all | Summary of domain research reconciliation changes |
+| Domain Capabilities | capabilities.md | ~1400 | product-owner, architect, story-writer | CAP-NNN capability catalog (25 atomic capabilities, refined with full MCP method list, pagination, notifications) |
+| Domain Entities | entities.md | ~1800 | architect, product-owner, ux-designer | Entity model with attributes and relationships (expanded with Resource Subscription, Paginated List Response, Transport detail, Config Source paths, batch JSON-RPC, tool error semantics) |
+| Domain Invariants | invariants.md | ~1400 | product-owner, architect | DI-NNN business rules (20 invariants, +5 for client capabilities, pagination, tool errors) |
+| Domain Events | events.md | ~1400 | architect | Event triggers, preconditions, outcomes (expanded with server-initiated events, schema drift detection) |
+| Edge Cases | edge-cases.md | ~1500 | story-writer, test-writer | DEC-NNN domain-level edge cases (24 cases, +9 for server-initiated methods, pagination, batch JSON-RPC, progress/cancellation) |
+| Assumptions | assumptions.md | ~1400 | product-owner, test-writer | ASM-NNN with validation methods (15 assumptions, 2 partially validated, +2 for pagination and rmcp handler extensibility) |
+| Risks | risks.md | ~1500 | product-owner, architect | R-NNN risk register (15 risks, +2 for rug pull attacks and HTTP session complexity) |
+| Failure Modes | failure-modes.md | ~1500 | architect, test-writer | FM-NNN runtime failure catalog (21 modes, +6 for server-initiated methods, pagination, rug pull, HTTP sessions) |
+| Differentiators | differentiators.md | ~1100 | product-owner | Competitive differentiator → CAP-NNN mapping (refined with schema drift detection, research evidence) |
+| Reconciliation Notes | reconciliation-notes.md | ~1000 | all | Summary of domain research reconciliation changes |
 
 ## Cross-References
 
@@ -67,7 +70,10 @@ DevEx engineers, agent developers, security teams, and MCP server authors.
 | Holdout scenario generation | assumptions.md + risks.md + failure-modes.md |
 | NFR derivation | risks.md + failure-modes.md |
 | Client capability implementation | entities.md (Sampling Request, Elicitation Request, Root, Task) + invariants.md (DI-016, DI-017, DI-018) + edge-cases.md (DEC-016–DEC-019) + failure-modes.md (FM-016–FM-018) |
-| Security rule development | entities.md (Security Finding) + edge-cases.md (DEC-018) + differentiators.md (Differentiator 1) + risks.md (R-004, R-011) |
+| Config parsing implementation | entities.md (Config Source with OS paths) + capabilities.md (CAP-001 dual schema) + edge-cases.md (DEC-007–DEC-010) + failure-modes.md (FM-006–FM-009) |
+| Pagination handling | entities.md (Paginated List Response) + invariants.md (DI-019) + edge-cases.md (DEC-020, DEC-021) + failure-modes.md (FM-019) + assumptions.md (ASM-014) |
+| Security rule development | entities.md (Security Finding) + edge-cases.md (DEC-018, DEC-023) + differentiators.md (Differentiator 1) + risks.md (R-004, R-011, R-014) + events.md (SchemaDriftDetected) + failure-modes.md (FM-020) |
+| Traffic capture and protocol correctness | entities.md (JSON-RPC Message, Resource Subscription) + invariants.md (DI-005, DI-006, DI-020) + edge-cases.md (DEC-022, DEC-023, DEC-024) + assumptions.md (ASM-015) |
 | Full domain review (adversary/spec-reviewer) | ALL sections |
 
 ## ID Registry Summary
@@ -75,11 +81,11 @@ DevEx engineers, agent developers, security teams, and MCP server authors.
 | ID Format | Count | Section |
 |-----------|-------|---------|
 | CAP-NNN | 25 | capabilities.md |
-| DI-NNN | 18 | invariants.md |
-| DEC-NNN | 19 | edge-cases.md |
-| ASM-NNN | 13 | assumptions.md |
-| R-NNN | 13 | risks.md |
-| FM-NNN | 18 | failure-modes.md |
+| DI-NNN | 20 | invariants.md |
+| DEC-NNN | 24 | edge-cases.md |
+| ASM-NNN | 15 | assumptions.md |
+| R-NNN | 15 | risks.md |
+| FM-NNN | 21 | failure-modes.md |
 
 ## Priority Distribution
 
@@ -104,8 +110,9 @@ DevEx engineers, agent developers, security teams, and MCP server authors.
 | 9 | Config sync and drift detection | CAP-021, CAP-022 |
 | 10 | Server comparison and diff | CAP-023, CAP-024, CAP-025 |
 
-## Key Changes in v1.1 (Domain Research Reconciliation)
+## Key Changes in v1.2 (Full Domain Research Reconciliation)
 
+### Carried from v1.1
 1. **Client vs. Server capability distinction** — MCP separates server capabilities (tools, resources, prompts, logging, completions, tasks) from client capabilities (roots, sampling, elicitation, tasks). Forge MCP must advertise and handle client capabilities.
 2. **rmcp SDK confirmed** — `warpdotdev/rmcp` with `ClientCapabilitiesBuilder` and `ServerCapabilities` structs. Community-maintained (by Warp), not directly Anthropic.
 3. **OWASP AST10 categories enumerated** — All 10 categories identified; ~6 are runtime-detectable.
@@ -113,3 +120,17 @@ DevEx engineers, agent developers, security teams, and MCP server authors.
 5. **Spec cadence faster than assumed** — ~6 months between updates (not 12).
 6. **Streamable HTTP replaces deprecated SSE** — Transport correction.
 7. **New entities, invariants, edge cases, failure modes, assumptions, risks** added for server-initiated methods.
+
+### New in v1.2
+8. **VS Code config correction** — VS Code uses `mcp.json` (not `settings.json`), top-level key `"servers"` (not `"mcpServers"`), with explicit `"type"` field. CAP-001 now specifies dual schema parsing.
+9. **Complete MCP method inventory** — CAP-005 now enumerates all ~25 distinct method names including notifications, `ping`, `resources/subscribe`/`unsubscribe`, and exact method names (`completion/complete` not `completions/complete`).
+10. **Cursor-based pagination** — New entity (Paginated List Response), new invariant (DI-019), new edge cases (DEC-020, DEC-021), new failure mode (FM-019), new assumption (ASM-014).
+11. **Batch JSON-RPC support** — JSON-RPC Message entity refined with batch type, new edge case (DEC-022) for response ordering.
+12. **Tool error semantics** — New invariant (DI-020) distinguishing `result.isError` from JSON-RPC errors. New edge case (DEC-023).
+13. **Progress and cancellation protocol** — New edge case (DEC-024) for post-cancellation progress notifications.
+14. **Rug pull attack pattern** — New failure mode (FM-020), new risk (R-014), new event (SchemaDriftDetected). Schema drift detection elevated to security-critical.
+15. **Streamable HTTP session management** — New failure mode (FM-021), new risk (R-015) for `Mcp-Session-Id` and session recovery.
+16. **Resource subscriptions** — New entity (Resource Subscription) for `resources/subscribe`/`unsubscribe`.
+17. **Per-editor config file paths** — Config Source entity now includes OS-specific paths for all 4 editors.
+18. **Transport detail expanded** — Transport Connection entity now includes stdio message format (UTF-8, newline-delimited), Streamable HTTP response modes (JSON vs SSE), session headers.
+19. **rmcp handler extensibility assumption** — New assumption (ASM-015) for traffic capture via handler interception.
