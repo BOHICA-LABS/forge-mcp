@@ -173,7 +173,7 @@ cycle: v0.1.0-greenfield
 | STORY-034 | Error Rate Trend Tracking | 3 | 5 |
 | STORY-035 | Configurable Alerting Thresholds | 3 | 5 |
 | STORY-036 | Alert State Machine (Normal → Breached → Recovered) | 3 | 5 |
-| STORY-026 | Metric Snapshot JSON Export via CLI | 2 | 3 |
+| STORY-026 | Metric Snapshot JSON Export via CLI | 3 | 3 |
 | STORY-046 | Time-Series Metric Visualization in TUI | 4 | 5 |
 
 **Total:** 6 stories / 28 points

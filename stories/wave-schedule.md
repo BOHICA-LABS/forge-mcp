@@ -24,19 +24,19 @@ cycle: v0.1.0-greenfield
 | Wave | Theme | Stories | Points | P0 | P1 | P2 | Holdout Scenarios |
 |------|-------|---------|--------|----|----|----|--------------------|
 | Wave 0 | Infrastructure Foundation | 3 | 8 | 3 | — | — | — |
-| Wave 1 | Core Protocol + Discovery | 12 | 60 | 12 | — | — | HS-012 |
-| Wave 2 | Protocol Operations + CLI | 11 | 46 | 11 | — | — | HS-008, HS-011 |
-| Wave 3 | Traffic Inspection + Health Monitoring | 10 | 43 | 10 | — | — | HS-002, HS-005, HS-009, HS-010 |
+| Wave 1 | Core Protocol + Discovery | 12 | 50 | 12 | — | — | HS-012 |
+| Wave 2 | Protocol Operations + CLI | 10 | 51 | 10 | — | — | HS-008, HS-011 |
+| Wave 3 | Traffic Inspection + Health Monitoring + Metric Export | 11 | 51 | 11 | — | — | HS-002, HS-005, HS-009, HS-010 |
 | Wave 4 | TUI Dashboard | 10 | 49 | 10 | — | — | HS-001, HS-017, HS-018 |
 | Wave 5 | Security Auditing | 8 | 39 | — | 8 | — | HS-003, HS-006, HS-014, HS-015, HS-016 |
-| Wave 6 | Integration, NFR Validation & Cross-Cutting | 11 | 31 | 2 | 7 | 2 | HS-004, HS-007, HS-013 |
-| **Total** | | **65** | **276** | **48** | **15** | **2** | **18 holdout scenarios** |
+| Wave 6 | Integration, NFR Validation & Cross-Cutting | 11 | 50 | 2 | 7 | 2 | HS-004, HS-007, HS-013 |
+| **Total** | | **65** | **298** | **48** | **15** | **2** | **18 holdout scenarios** |
 
-> **Note on story count vs. STORY-INDEX.md:** STORY-INDEX.md records 65 stories.
-> Wave 2 corrects the index's count of 11 (STORY-016 to STORY-026) to reflect that
-> STORY-026 depends on STORY-033 (Wave 3), so its wave assignment is Wave 2 only in
-> the "metric snapshot export" sense — see Wave 3 note below for the dependency
-> acknowledgement. Wave assignments exactly match STORY-INDEX.md column "Wave".
+> Wave assignments exactly match STORY-INDEX.md column "Wave".
+> STORY-026 (Metric Snapshot JSON Export) has been moved to Wave 3 because it depends
+> on STORY-033 (Passive Latency & Throughput Metric Collection), which is also Wave 3.
+> Wave 2 contains STORY-016 through STORY-025 (10 stories); Wave 3 contains STORY-026
+> through STORY-036 (11 stories).
 
 ---
 
@@ -84,7 +84,7 @@ pass their own unit tests and respond to a basic `initialize` request.
 connection lifecycle, daemon, session pooling, and full capability negotiation.
 No user-facing output in this wave — everything is library/daemon infrastructure.
 
-**Effort:** 60 story points
+**Effort:** 50 story points
 **Key constraint:** STORY-013 (capability negotiation) is the critical-path bottleneck;
 every Wave 2+ story depends on it.
 
@@ -149,7 +149,7 @@ connects and returns capability summary; daemon starts on first invocation.
 elicitation), CLI subcommand dispatch, structured JSON output, and metric export.
 First wave with user-visible output.
 
-**Effort:** 46 story points
+**Effort:** 51 story points
 **Key constraint:** All stories in this wave depend on STORY-013 (negotiation).
 STORY-016 (tool list) is on the critical path — STORY-022 and STORY-045 depend on it.
 
@@ -182,15 +182,6 @@ After STORY-013 completes:
 │ STORY-023 → STORY-024 → STORY-025                                       │
 │   [5]          [5]          [3]                                         │
 └─────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│ STORY-026  Metric Snapshot JSON Export  [3]                             │
-│ Depends on STORY-023 (CLI dispatch) AND STORY-033 (Wave 3 metrics)      │
-│ → Assign to Wave 2 but CAN ONLY start after STORY-033 completes        │
-│   in practice; block the story until Wave 3 metrics are available.      │
-│   Alternatively: implement the CLI subcommand skeleton in Wave 2,       │
-│   wire the metric source in Wave 3.                                     │
-└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 | Step | Stories | Can Parallelize? | Dependency Notes |
@@ -201,7 +192,6 @@ After STORY-013 completes:
 | 2 | STORY-022 | No (after STORY-016) | Needs tool invocation |
 | 3 | STORY-024 | No (after STORY-023) | |
 | 4 | STORY-025 | No (after STORY-024) | |
-| 5 | STORY-026 | No (after STORY-023 AND STORY-033) | STORY-033 is Wave 3; defer wiring |
 
 **Recommended agent allocation:** Up to 6 parallel agents in step 1 (groups A + B + C first story).
 
@@ -217,9 +207,12 @@ end-to-end.
 traffic filtering, full-text search, replay, passive metric collection, error rate
 tracking, configurable alerting, and alert state machine.
 
-**Effort:** 43 story points
+**Effort:** 51 story points
 **Key constraint:** STORY-027 (capture) is the root of both the traffic and health
 subtrees. STORY-033 (metrics) is on the critical path to the TUI sparklines (Wave 4).
+STORY-026 (Metric Snapshot CLI Export) is also in this wave because it depends on
+STORY-033; it can run in parallel with the rest of Wave 3 once STORY-023 (Wave 2)
+and STORY-033 both complete.
 
 ### Execution Plan
 
@@ -259,13 +252,8 @@ After STORY-013 completes (from Wave 1):
 | 2 | STORY-028, STORY-029, STORY-033 | **Yes — all parallel** | All need only STORY-027 |
 | 3a | STORY-030, STORY-031, STORY-032 | **Yes — parallel** | All need STORY-029 |
 | 3b | STORY-034, STORY-035 | **Yes — parallel with each other and group 3a** | Need STORY-033 |
+| 3c | STORY-026 | **Yes — parallel with group 3b** | Needs STORY-023 (W2) + STORY-033; starts once both done |
 | 4 | STORY-036 | No (after STORY-035) | Alert SM builds on threshold events |
-
-**Note on STORY-026:** STORY-026 (Metric Snapshot JSON Export) is assigned Wave 2 in
-STORY-INDEX.md because its CLI dispatch stub (STORY-023) is Wave 2. However, it cannot
-be *fully wired* until STORY-033 completes in Wave 3. Implementation strategy: stub
-the `forge metrics snapshot` subcommand in Wave 2 with a placeholder response; complete
-the metric source wiring at the start of Wave 3 before STORY-027 takes priority.
 
 **Wave 3 exit gate:** `forge traffic inspect <server>` streams live messages; buffer
 does not exceed configured MB limit under 1000 msg/sec; `forge health` returns latency
@@ -557,19 +545,15 @@ are satisfied.
 | Wave | Stories | Individual Points | Total Points | Cumulative |
 |------|---------|-------------------|--------------|------------|
 | Wave 0 | STORY-001(3), STORY-002(3), STORY-003(2) | 3+3+2 | **8 pts** | 8 |
-| Wave 1 | STORY-004(5), STORY-005(5), STORY-006(3), STORY-007(5), STORY-008(5), STORY-009(3), STORY-010(5), STORY-011(3), STORY-012(3), STORY-013(5), STORY-014(5), STORY-015(3) | — | **55 pts** | 63 |
-| Wave 2 | STORY-016(8), STORY-017(5), STORY-018(5), STORY-019(5), STORY-020(5), STORY-021(5), STORY-022(5), STORY-023(5), STORY-024(5), STORY-025(3), STORY-026(3) | — | **54 pts** | 117 |
-| Wave 3 | STORY-027(5), STORY-028(5), STORY-029(5), STORY-030(5), STORY-031(3), STORY-032(5), STORY-033(5), STORY-034(5), STORY-035(5), STORY-036(5) | — | **48 pts** | 165 |
-| Wave 4 | STORY-037(8), STORY-038(3), STORY-039(5), STORY-040(5), STORY-041(3), STORY-042(5), STORY-043(5), STORY-044(5), STORY-045(5), STORY-046(5) | — | **49 pts** | 214 |
-| Wave 5 | STORY-047(5), STORY-048(5), STORY-049(5), STORY-050(5), STORY-051(3), STORY-052(8), STORY-053(3), STORY-054(5) | — | **39 pts** | 253 |
-| Wave 6 | STORY-055(5), STORY-056(5), STORY-057(3), STORY-058(5), STORY-059(8), STORY-060(3), STORY-061(5), STORY-062(3), STORY-063(5), STORY-064(5), STORY-065(3) | — | **50 pts** | 303 |
+| Wave 1 | STORY-004(5), STORY-005(5), STORY-006(3), STORY-007(5), STORY-008(5), STORY-009(3), STORY-010(5), STORY-011(3), STORY-012(3), STORY-013(5), STORY-014(5), STORY-015(3) | — | **50 pts** | 58 |
+| Wave 2 | STORY-016(8), STORY-017(5), STORY-018(5), STORY-019(5), STORY-020(5), STORY-021(5), STORY-022(5), STORY-023(5), STORY-024(5), STORY-025(3) | — | **51 pts** | 109 |
+| Wave 3 | STORY-026(3), STORY-027(5), STORY-028(5), STORY-029(5), STORY-030(5), STORY-031(3), STORY-032(5), STORY-033(5), STORY-034(5), STORY-035(5), STORY-036(5) | — | **51 pts** | 160 |
+| Wave 4 | STORY-037(8), STORY-038(3), STORY-039(5), STORY-040(5), STORY-041(3), STORY-042(5), STORY-043(5), STORY-044(5), STORY-045(5), STORY-046(5) | — | **49 pts** | 209 |
+| Wave 5 | STORY-047(5), STORY-048(5), STORY-049(5), STORY-050(5), STORY-051(3), STORY-052(8), STORY-053(3), STORY-054(5) | — | **39 pts** | 248 |
+| Wave 6 | STORY-055(5), STORY-056(5), STORY-057(3), STORY-058(5), STORY-059(8), STORY-060(3), STORY-061(5), STORY-062(3), STORY-063(5), STORY-064(5), STORY-065(3) | — | **50 pts** | 298 |
 
-> **Reconciliation note:** STORY-INDEX.md reports 276 total points; this schedule
-> sums to 303. The delta arises from the index's wave summary table (which was
-> an approximation) vs. the per-story declared points in the Full Story Registry.
-> The individual story points in the Full Story Registry are authoritative.
-> The wave summary row in STORY-INDEX.md ("Wave 1: 60 pts") was a rounded estimate.
-> This schedule uses the per-story point values exactly as declared.
+> All point totals are derived from the per-story declared values in the Full Story
+> Registry (STORY-INDEX.md). Grand total: 298 story points across 65 stories.
 
 ---
 
@@ -579,8 +563,8 @@ are satisfied.
 |------|---------------------|-----------------|-------------------|
 | Wave 0 | 2 | STORY-002 ∥ STORY-003 | STORY-001 (gate) |
 | Wave 1 | 4 | {007,008} ∥ {011,012} ∥ {014,015} | STORY-001→004→007→009→010; STORY-013 |
-| Wave 2 | 7 | {016,017,018,021} ∥ {019,020} ∥ {023} | STORY-016→022; STORY-023→024→025 |
-| Wave 3 | 3 | {028,029,033} ∥ {030,031,032} ∥ {034,035} | STORY-027→buffer/metrics; STORY-035→036 |
+| Wave 2 | 6 | {016,017,018,021} ∥ {019,020} ∥ {023} | STORY-016→022; STORY-023→024→025 |
+| Wave 3 | 3 | {028,029,033} ∥ {030,031,032} ∥ {034,035,026} | STORY-027→buffer/metrics; STORY-035→036; STORY-026 after 023+033 |
 | Wave 4 | 6 | {038,039,044} ∥ {042,043,045} | STORY-037 (gate); STORY-039→{040,041}; STORY-043→046 |
 | Wave 5 | 3 | {047,048,049} | STORY-052 (aggregation gate); STORY-052→053→054 |
 | Wave 6 | 8 | {055,059,061,062,063,064,065} start together | STORY-055→{056,057}→058; STORY-059→060 |
@@ -616,7 +600,7 @@ are satisfied.
 | STORY-023 | CLI Subcommand Dispatch & Exit Code Semantics | 2 | 5 | P0 | W2-cli-parallel |
 | STORY-024 | Structured JSON Output & Agent-Optimized Tokens | 2 | 5 | P0 | Serial (CLI chain) |
 | STORY-025 | Pipeable Output & Shell Composition | 2 | 3 | P0 | Serial (CLI chain) |
-| STORY-026 | Metric Snapshot JSON Export via CLI | 2 | 3 | P0 | Serial (after 023+033) |
+| STORY-026 | Metric Snapshot JSON Export via CLI | 3 | 3 | P0 | Parallel with W3-metrics (after 023+033) |
 | STORY-027 | Transparent JSON-RPC Message Capture | 3 | 5 | P0 | Serial gate (traffic) |
 | STORY-028 | Per-Message Timing & Throughput Analysis | 3 | 5 | P0 | W3-capture-parallel |
 | STORY-029 | Capture Buffer Management with Bounded Memory | 3 | 5 | P0 | W3-capture-parallel |

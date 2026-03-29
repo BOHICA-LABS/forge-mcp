@@ -26,24 +26,24 @@ cycle: v0.1.0-greenfield
 | P2 stories | 6 |
 | Waves | 7 (Wave 0–Wave 6) |
 | Epics | 12 (EPIC-00 through EPIC-10 + SR refinements) |
-| Total story points | 276 |
+| Total story points | 298 |
 
 ## Epic Story Counts
 
 | Epic | Name | Stories | Points | Priority |
 |------|------|---------|--------|----------|
-| EPIC-00 | Infrastructure & Testing Foundation | 3 | 10 | P0 |
-| EPIC-01 | Server Discovery & Connection | 9 | 38 | P0 |
-| EPIC-02 | MCP Protocol Core | 9 | 47 | P0 |
-| EPIC-03 | TUI Dashboard | 9 | 47 | P0 |
+| EPIC-00 | Infrastructure & Testing Foundation | 3 | 8 | P0 |
+| EPIC-01 | Server Discovery & Connection | 9 | 37 | P0 |
+| EPIC-02 | MCP Protocol Core | 10 | 51 | P0 |
+| EPIC-03 | TUI Dashboard | 9 | 44 | P0 |
 | EPIC-04 | Traffic Inspection | 6 | 28 | P0 |
-| EPIC-05 | CLI Mode | 5 | 21 | P0 |
-| EPIC-06 | Health Monitoring | 6 | 27 | P0 |
-| EPIC-07 | Security Auditing | 7 | 36 | P1 |
+| EPIC-05 | CLI Mode | 3 | 13 | P0 |
+| EPIC-06 | Health Monitoring | 6 | 28 | P0 |
+| EPIC-07 | Security Auditing | 8 | 39 | P1 |
 | EPIC-08 | Conformance Testing | 4 | 18 | P1 |
-| EPIC-09 | Config Drift Detection | 3 | 12 | P1 |
-| EPIC-10 | Server Comparison | 3 | 12 | P2 |
-| SR | Spec Review Refinements | 1 | 5 | P0/P1 |
+| EPIC-09 | Config Drift Detection | 2 | 11 | P1 |
+| EPIC-10 | Server Comparison | 3 | 13 | P2 |
+| SR | Spec Review Refinements | 2 | 8 | P0/P1 |
 
 ---
 
@@ -76,7 +76,7 @@ cycle: v0.1.0-greenfield
 | STORY-023 | CLI Subcommand Dispatch & Exit Code Semantics | EPIC-05 | 2 | 5 | P0 | STORY-013 | draft |
 | STORY-024 | Structured JSON Output & Agent-Optimized Tokens | EPIC-05 | 2 | 5 | P0 | STORY-023 | draft |
 | STORY-025 | Pipeable Output & Shell Composition | EPIC-05 | 2 | 3 | P0 | STORY-024 | draft |
-| STORY-026 | Metric Snapshot JSON Export via CLI | EPIC-06 | 2 | 3 | P0 | STORY-023, STORY-030 | draft |
+| STORY-026 | Metric Snapshot JSON Export via CLI | EPIC-06 | 3 | 3 | P0 | STORY-023, STORY-033 | draft |
 | STORY-027 | Transparent JSON-RPC Message Capture | EPIC-04 | 3 | 5 | P0 | STORY-013 | draft |
 | STORY-028 | Per-Message Timing & Throughput Analysis | EPIC-04 | 3 | 5 | P0 | STORY-027 | draft |
 | STORY-029 | Capture Buffer Management with Bounded Memory | EPIC-04 | 3 | 5 | P0 | STORY-027 | draft |
@@ -124,9 +124,9 @@ cycle: v0.1.0-greenfield
 | Wave | Stories | Points | Theme |
 |------|---------|--------|-------|
 | Wave 0 | STORY-001, 002, 003 | 8 | Infrastructure: workspace + mock servers |
-| Wave 1 | STORY-004–015 | 60 | Core protocol + discovery (no UI) |
-| Wave 2 | STORY-016–026 | 46 | Protocol operations + CLI mode |
-| Wave 3 | STORY-027–036 | 43 | Traffic inspection + health monitoring |
+| Wave 1 | STORY-004–015 | 50 | Core protocol + discovery (no UI) |
+| Wave 2 | STORY-016–025 | 51 | Protocol operations + CLI mode |
+| Wave 3 | STORY-026–036 | 51 | Traffic inspection + health monitoring + metric export |
 | Wave 4 | STORY-037–046 | 49 | TUI dashboard |
 | Wave 5 | STORY-047–054 | 39 | Security auditing |
-| Wave 6 | STORY-055–065 | 42 | Conformance, config drift, comparison, NFR validation |
+| Wave 6 | STORY-055–065 | 50 | Conformance, config drift, comparison, NFR validation |
