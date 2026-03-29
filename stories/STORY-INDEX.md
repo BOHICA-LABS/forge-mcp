@@ -21,9 +21,9 @@ cycle: v0.1.0-greenfield
 | Metric | Value |
 |--------|-------|
 | Total stories | 65 |
-| P0 stories | 46 |
-| P1 stories | 16 |
-| P2 stories | 6 |
+| P0 stories | 48 |
+| P1 stories | 13 |
+| P2 stories | 4 |
 | Waves | 7 (Wave 0–Wave 6) |
 | Epics | 12 (EPIC-00 through EPIC-10 + SR refinements) |
 | Total story points | 298 |
