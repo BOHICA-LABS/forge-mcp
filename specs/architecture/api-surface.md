@@ -168,6 +168,13 @@ pub enum Ast10Category {
 }
 
 pub fn analyze_message(msg: &McpMessage, rules: &RuleSet) -> Vec<SecurityFinding>;
+
+/// Compares two tool sets and returns findings for any differences.
+///
+/// Uses a two-tier model:
+/// - **Canonical fields** (name, description, inputSchema): changes produce ≥ high severity findings.
+/// - **Auxiliary fields** (annotations): changes produce info-level findings.
+/// - New/removed tools: info-level (added) or medium-level (removed) findings.
 pub fn detect_schema_drift(prev: &ToolSet, current: &ToolSet) -> Vec<SecurityFinding>;
 ```
 

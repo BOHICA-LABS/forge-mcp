@@ -33,6 +33,7 @@ Maps each VP to its target module/function and tracks coverage status.
 | VP-012 | forge-tui | TUI state machine no invalid states | proptest | draft | BC-3.07.001 |
 | VP-013 | forge-core | Connection state machine validity | kani | draft | BC-1.02.003 |
 | VP-014 | forge-traffic | Filter preserves message ordering | proptest | draft | BC-4.10.001 |
+| VP-015 | forge-daemon | Session-pool multiplexing correctness | proptest | draft | BC-1.03.001 |
 
 ## Coverage Summary
 
@@ -44,13 +45,14 @@ Maps each VP to its target module/function and tracks coverage status.
 | forge-health | 2 | 1 | 1 | 0 | 2 |
 | forge-security | 3 | 2 | 1 | 0 | 3 |
 | forge-tui | 1 | 0 | 1 | 0 | 1 |
-| **Total** | **14** | **7** | **5** | **2** | **14** |
+| forge-daemon | 1 | 0 | 1 | 0 | 1 |
+| **Total** | **15** | **7** | **6** | **2** | **15** |
 
 ## Coverage Gaps
 
 Modules without VPs (by design — effectful-heavy or test-sufficient):
 
-- **forge-daemon:** Effectful-heavy module. Verified through integration tests only.
+- **forge-daemon:** Session-routing pure core verified via VP-015 (proptest). Effectful shell (socket I/O, process lifecycle) verified through integration tests.
 - **forge-conformance:** Pure core covered by unit tests; shell requires mock server integration tests.
 - **forge-config:** Fully pure but low criticality. Covered by proptest in diff correctness (tracked in tooling-selection, not as a VP due to low risk).
 - **forge-mcp (binary):** Output formatting covered by proptest; no formal VP warranted for CLI layer.

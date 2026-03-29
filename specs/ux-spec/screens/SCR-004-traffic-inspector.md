@@ -2,14 +2,18 @@
 document_type: ux-spec-screen
 screen_id: SCR-004
 screen_name: Traffic Inspector
-version: "1.0"
+version: "1.1"
 status: draft
 producer: ux-designer
-timestamp: 2026-03-29T14:15:00
+timestamp: 2026-03-29T14:57:00
 phase: 1c
 complexity: complex
 traces_to: UX-INDEX.md
 prd_requirements: [BC-4.09.001, BC-4.09.002, BC-4.09.003, BC-4.10.001, BC-4.10.002, BC-3.08.001]
+changelog:
+  - version: "1.1"
+    date: 2026-03-29
+    change: "ADV-P2-004 — Added Replay Target Dialog (ELM-019/ELM-020), Replay Confirmation Dialog (ELM-021), and Replay Progress indicator (ELM-022) to enforce BC-4.10.003 PRE-002/PRE-004 (DI-007). Updated keyboard shortcuts, state definitions, and BC traceability accordingly."
 ---
 
 # Screen: Traffic Inspector (SCR-004)
@@ -110,6 +114,75 @@ prd_requirements: [BC-4.09.001, BC-4.09.002, BC-4.09.003, BC-4.10.001, BC-4.10.0
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
+### Replay Target Dialog (ELM-019) — triggered by `R` from any detail/split/list view
+
+```
+╔══════════════════════════════════════════════════════════════════════════╗
+║  TRAFFIC INSPECTOR — my-server    [● REC]  [47 msgs]                    ║
+║  ┌ Replay Target ─────────────────────────────────────────────────────┐  ║
+║  │ Select the server to replay this message to:                       │  ║
+║  │                                                                    │  ║
+║  │  Replaying:  tools/call  (ID:003)                                  │  ║
+║  │                                                                    │  ║
+║  │  ▶ staging-server   (localhost:9001)                               │  ║  ← highlighted
+║  │    my-server        (localhost:8080)  [original]                   │  ║
+║  │    prod-server      (api.example.com:443)                          │  ║
+║  │                                                                    │  ║
+║  │  j/k: navigate   Enter: select   Esc: cancel                       │  ║
+║  └────────────────────────────────────────────────────────────────────┘  ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+> Note: The original server is labeled `[original]` but is NOT pre-highlighted.
+> A non-original server is focused by default. This enforces DI-007: replay
+> never defaults to the original server.
+
+### Replay Confirmation Dialog (ELM-021) — after target is selected
+
+```
+╔══════════════════════════════════════════════════════════════════════════╗
+║  TRAFFIC INSPECTOR — my-server    [● REC]  [47 msgs]                    ║
+║  ┌ Confirm Replay ────────────────────────────────────────────────────┐  ║
+║  │                                                                    │  ║
+║  │  Replay this message?                                              │  ║
+║  │                                                                    │  ║
+║  │    Method:  tools/call                                             │  ║
+║  │    ID:      003                                                    │  ║
+║  │    Target:  staging-server  (localhost:9001)           ← prominent │  ║
+║  │                                                                    │  ║
+║  │  ┌────────────────────────────────────────────────────────────┐   │  ║
+║  │  │ ⚠ WARNING: Replaying to original server — responses may   │   │  ║  ← shown only when
+║  │  │   differ due to state changes.                             │   │  ║     target == original
+║  │  └────────────────────────────────────────────────────────────┘   │  ║
+║  │                                                                    │  ║
+║  │            [ ✓ Confirm (Enter/y) ]   [ ✗ Cancel (Esc/n) ]        │  ║
+║  └────────────────────────────────────────────────────────────────────┘  ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+> The warning block is **only shown** when the user explicitly selected the
+> original server as the replay target (EC-007). It does not block the replay —
+> the user confirmed intentional choice — but it must be visible at confirmation.
+> "Confirm" button is focused by default.
+
+### Replay Progress (ELM-022) — after confirmation
+
+```
+╔══════════════════════════════════════════════════════════════════════════╗
+║  TRAFFIC INSPECTOR — my-server    [● REC]  [47 msgs]                    ║
+║  ┌ Replay Progress ───────────────────────────────────────────────────┐  ║
+║  │  Replaying to staging-server (localhost:9001)                      │  ║
+║  │                                                                    │  ║
+║  │  [████████████████████░░░░░░░░░░]  1 / 1 messages sent            │  ║
+║  │                                                                    │  ║
+║  │  Responses received: 0 / 1                                         │  ║
+║  └────────────────────────────────────────────────────────────────────┘  ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+> Progress dismisses automatically on completion. On error, dialog stays open
+> and shows error text with `[ Dismiss ]` button.
+
 ---
 
 ## Element Inventory
@@ -134,6 +207,10 @@ prd_requirements: [BC-4.09.001, BC-4.09.002, BC-4.09.003, BC-4.10.001, BC-4.10.0
 | ELM-016 | Detail view | FullPane | Modal-like | JSON viewer for expanded message |
 | ELM-017 | Split view | SplitPane | Modal-like | Request+Response side-by-side |
 | ELM-018 | Scrollbar | Scrollbar | Right edge | Position indicator |
+| ELM-019 | Replay Target Dialog | Dialog | Overlay | Lists all registered servers; user selects replay target; original server labeled but NOT pre-highlighted (DI-007) |
+| ELM-020 | Server list | SelectList | Inside ELM-019 | Navigable list of registered servers with name, address, and `[original]` label on the source server |
+| ELM-021 | Replay Confirmation Dialog | Dialog | Overlay | Shows method, message ID, and **target server name + address** prominently; warning badge when target == original server |
+| ELM-022 | Replay Progress indicator | ProgressBar | Inside overlay | Shows "N / M messages sent" and "responses received" while replay executes; auto-dismisses on success; shows error text on failure |
 
 ---
 
@@ -193,6 +270,11 @@ ASCII fallback: `>` / `<` / `^`
 | `search_text` | String | `/` search text |
 | `search_matches` | Vec<usize> | Indices of matching rows |
 | `search_cursor` | usize | Current search match position |
+| `replay_target_dialog_open` | bool | Replay Target Dialog (ELM-019) visible |
+| `replay_confirm_dialog_open` | bool | Replay Confirmation Dialog (ELM-021) visible |
+| `replay_selected_target` | Option<ServerId> | Server chosen in ELM-019 (None until user selects) |
+| `replay_in_progress` | bool | Replay executing; progress overlay (ELM-022) visible |
+| `replay_progress` | (usize, usize) | (messages_sent, messages_total) for ELM-022 |
 
 ---
 
@@ -228,8 +310,11 @@ Filters are AND-combined. "0 of N" shown when all filtered out.
 | `/` | Search within visible messages | Highlights matches |
 | `n` | Next search match | |
 | `N` | Previous search match | |
-| `R` | Replay selected request | Sends message to server again |
-| `y` | Yank selected message to clipboard | |
+| `R` | Initiate replay | Opens Replay Target Dialog (ELM-019); does NOT immediately send any message |
+| `Enter` | Select server (in ELM-019) / Confirm replay (in ELM-021) | Context-sensitive |
+| `y` | Confirm replay (in ELM-021) / Yank message (in list/detail) | Context-sensitive |
+| `n` | Cancel at ELM-021 confirmation | Dismisses dialog; no replay |
+| `Esc` | Cancel any replay dialog / Close detail / Clear filter | Priority: replay dialog > detail > filter > search |
 | `Tab` | Move focus to Capability Browser | |
 
 ---
@@ -280,6 +365,6 @@ Per BC-4.09.003:
 | BC-4.09.003 | Buffer management; WRAP indicator; 100MB cap |
 | BC-4.10.001 | Filter bar (method, direction, status, time range) |
 | BC-4.10.002 | `/` search for full-text payload search |
-| BC-4.10.003 | `R` key replay action |
+| BC-4.10.003 | Replay workflow via `R` key, with: PRE-002 (DI-007) — ELM-019 Replay Target Dialog forces explicit server selection before replay proceeds; PRE-004 — ELM-021 Confirmation Dialog requires user confirmation; POST-003/POST-004 — comparison status badge on replayed message row; POST-005 — ELM-019 defaults focus to non-original server (original labeled but not pre-selected); POST-006 — ELM-022 shows real-time progress (N/M sent, responses received); EC-007 — warning badge in ELM-021 when user selects original server as target |
 | BC-3.08.001 | JSON syntax highlighting in detail/split views |
 | BC-3.08.005 | Direction/status as glyph + text, not color-only |

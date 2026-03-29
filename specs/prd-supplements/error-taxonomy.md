@@ -50,6 +50,9 @@ traces_to: prd.md
 | E-CON-006 | degraded | 0 | `Connection warning: server protocol version <version> differs from expected <expected>` | BC-2.04.003 |
 | E-CON-007 | broken | 2 | `Connection failed: Streamable HTTP session lost — <reason>` | FM-021, R-015 |
 | E-CON-008 | degraded | 0 | `Connection recovered: session re-established after <event>` | FM-021 |
+| E-CON-009 | broken | 2 | `Connection failed: authentication failed — HTTP <status> for <url>` | BC-1.02.002 |
+| E-CON-010 | degraded | 0 | `Connection warning: insecure HTTP connection to <url>` | BC-1.02.002 |
+| E-CON-011 | broken | 2 | `Connection failed: server unavailable — HTTP <status> for <url>` | BC-1.02.002 |
 
 ### Configuration Errors (CFG)
 

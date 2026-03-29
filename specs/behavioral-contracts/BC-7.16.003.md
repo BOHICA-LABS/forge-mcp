@@ -20,11 +20,14 @@ introduced: v0.1.0
 
 ## Summary
 
-The security auditor records a cryptographic hash of each tool's metadata
-(name, description, inputSchema, annotations) at first connection. On
-subsequent connections or `tools/list_changed` notifications, the auditor
-compares current metadata against the stored baseline and alerts on any change.
-This detects "rug pull" attacks where a tool's capabilities change silently.
+The security auditor records a cryptographic hash of each tool's **canonical
+metadata** (name, description, inputSchema) at first connection. Separately, it
+stores a hash of **auxiliary metadata** (annotations). On subsequent connections
+or `tools/list_changed` notifications, the auditor compares current metadata
+against the stored baseline. Changes to canonical metadata produce high-severity
+findings; changes to auxiliary metadata (annotations only) produce info-level
+findings. This detects "rug pull" attacks where a tool's capabilities change
+silently, while still tracking annotation drift at lower severity.
 
 ## Preconditions
 
@@ -38,9 +41,10 @@ This detects "rug pull" attacks where a tool's capabilities change silently.
 | ID | Condition |
 |----|-----------|
 | POST-001 | On first connection to a server, a SHA-256 hash of each tool's canonical metadata is computed and stored |
-| POST-002 | Canonical metadata includes: name, description, inputSchema (JSON-canonicalized) |
-| POST-003 | On subsequent connections, current hashes are compared against stored baselines |
-| POST-004 | Any hash mismatch produces a finding with severity ≥ high |
+| POST-002 | Canonical metadata for hashing includes: name, description, inputSchema (JSON-canonicalized). Annotations are **excluded** from the canonical hash. |
+| POST-002a | Auxiliary metadata (annotations) is stored separately and compared on re-connection. Annotation-only changes produce info-level findings (see EC-009). |
+| POST-003 | On subsequent connections, current canonical hashes are compared against stored baselines |
+| POST-004 | Any canonical hash mismatch produces a finding with severity ≥ high |
 | POST-005 | The finding includes: tool name, changed fields (diff), old hash, new hash |
 | POST-006 | When `tools/list_changed` notification is received, a re-scan is triggered |
 | POST-007 | New tools (not in baseline) produce an info-level "new tool added" finding |
@@ -49,6 +53,8 @@ This detects "rug pull" attacks where a tool's capabilities change silently.
 
 ## Hash Computation
 
+### Canonical Hash (name, description, inputSchema)
+
 ```
 canonical_metadata = JSON.stringify({
   name: tool.name,
@@ -56,8 +62,23 @@ canonical_metadata = JSON.stringify({
   inputSchema: canonicalize(tool.inputSchema)
 }, keys_sorted)
 
-hash = SHA-256(canonical_metadata)
+canonical_hash = SHA-256(canonical_metadata)
 ```
+
+### Auxiliary Hash (annotations only)
+
+```
+auxiliary_metadata = JSON.stringify({
+  annotations: canonicalize(tool.annotations)
+}, keys_sorted)
+
+auxiliary_hash = SHA-256(auxiliary_metadata)
+```
+
+Annotations are compared separately because they are auxiliary hints (e.g.,
+`readOnlyHint`, `destructiveHint`) that do not change a tool's functional
+contract. A canonical hash mismatch is a high-severity finding (potential rug
+pull); an auxiliary hash mismatch is an info-level finding (annotation drift).
 
 JSON canonicalization: keys sorted alphabetically at all nesting levels, no
 whitespace, null values included (they are part of the schema contract).

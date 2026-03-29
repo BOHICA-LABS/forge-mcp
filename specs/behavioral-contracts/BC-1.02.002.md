@@ -49,13 +49,13 @@ Establishes a connection to an MCP server via Streamable HTTP transport. Connect
 
 | ID | Condition | Expected Behavior |
 |----|-----------|-------------------|
-| EC-001 | FM-004: TLS certificate validation fails (self-signed, expired, hostname mismatch) | Return `Err(E-CON-005: TLS certificate error: <detail>)`. Do NOT bypass validation by default. |
-| EC-002 | Server returns HTTP 401/403 on initialize | Return `Err(E-CON-007: Authentication failed: HTTP <status>)`. Include response body if present. |
-| EC-003 | Server URL uses `http://` (not HTTPS) | Allow connection but emit warning `E-CON-008: Insecure HTTP connection to <url>`. |
+| EC-001 | FM-004: TLS certificate validation fails (self-signed, expired, hostname mismatch) | Return `Err(E-CON-004: TLS error — <detail> for <hostname>)`. Do NOT bypass validation by default. |
+| EC-002 | Server returns HTTP 401/403 on initialize | Return `Err(E-CON-009: Authentication failed: HTTP <status> for <url>)`. Include response body if present. |
+| EC-003 | Server URL uses `http://` (not HTTPS) | Allow connection but emit warning `E-CON-010: Insecure HTTP connection to <url>`. |
 | EC-004 | Server does not return `Mcp-Session-Id` header | Connection proceeds without session ID. Re-establishment (BC-1.02.003) will create a new session. |
-| EC-005 | DNS resolution failure | Return `Err(E-CON-009: DNS resolution failed for <host>)`. |
-| EC-006 | Server returns HTTP 502/503/504 (gateway errors) | Return `Err(E-CON-010: Server unavailable: HTTP <status>)`. Reconnection handled by BC-1.02.003. |
-| EC-007 | Connection timeout (configurable, default 30s) | Return `Err(E-CON-004: Connection timeout after <N>s)`. |
+| EC-005 | DNS resolution failure | Return `Err(E-CON-001: DNS resolution failed for <hostname>)`. |
+| EC-006 | Server returns HTTP 502/503/504 (gateway errors) | Return `Err(E-CON-011: Server unavailable: HTTP <status> for <url>)`. Reconnection handled by BC-1.02.003. |
+| EC-007 | Connection timeout (configurable, default 30s) | Return `Err(E-CON-003: timeout after <seconds>s waiting for server response)`. |
 | EC-008 | Server URL contains path (e.g., `https://api.example.com/mcp/v1`) | Use full URL as-is. Do not strip or modify the path. |
 
 ## Canonical Test Vectors
@@ -71,15 +71,15 @@ Establishes a connection to an MCP server via Streamable HTTP transport. Connect
 
 | ID | Input | Expected Output |
 |----|-------|-----------------|
-| TV-003 | `url: "https://self-signed.example.com"` with self-signed cert | `Err(E-CON-005: TLS certificate error: self-signed certificate)` |
-| TV-004 | `url: "http://localhost:8080"` (plain HTTP) | Connection succeeds, warning `E-CON-008` emitted |
+| TV-003 | `url: "https://self-signed.example.com"` with self-signed cert | `Err(E-CON-004: TLS error — self-signed certificate for self-signed.example.com)` |
+| TV-004 | `url: "http://localhost:8080"` (plain HTTP) | Connection succeeds, warning `E-CON-010` emitted |
 
 ### Error
 
 | ID | Input | Expected Output |
 |----|-------|-----------------|
-| TV-005 | `url: "https://nonexistent.invalid"` | `Err(E-CON-009: DNS resolution failed for nonexistent.invalid)` |
-| TV-006 | Server returns HTTP 403 | `Err(E-CON-007: Authentication failed: HTTP 403)` |
+| TV-005 | `url: "https://nonexistent.invalid"` | `Err(E-CON-001: DNS resolution failed for nonexistent.invalid)` |
+| TV-006 | Server returns HTTP 403 | `Err(E-CON-009: Authentication failed: HTTP 403 for https://example.com/mcp)` |
 
 ## Verification Properties
 
