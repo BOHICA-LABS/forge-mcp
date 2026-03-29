@@ -1,0 +1,16 @@
+[package]
+name = "forge-discovery"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "MCP server discovery (filesystem, network, registry) for Forge MCP (L2)"
+
+[dependencies]
+forge-core = { workspace = true }
+forge-config = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

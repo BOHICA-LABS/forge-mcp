@@ -1,0 +1,20 @@
+[package]
+name = "forge-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Terminal UI for Forge MCP — interactive MCP server inspection dashboard (L4)"
+
+[dependencies]
+forge-core = { workspace = true }
+forge-traffic = { workspace = true }
+forge-health = { workspace = true }
+forge-security = { workspace = true }
+
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

@@ -1,0 +1,30 @@
+[package]
+name = "forge-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Forge MCP — CLI for discovering, inspecting, and auditing MCP servers (L4 binary)"
+
+[[bin]]
+name = "forge-mcp"
+path = "src/main.rs"
+
+[dependencies]
+forge-config = { workspace = true }
+forge-core = { workspace = true }
+forge-traffic = { workspace = true }
+forge-discovery = { workspace = true }
+forge-health = { workspace = true }
+forge-security = { workspace = true }
+forge-daemon = { workspace = true }
+forge-conformance = { workspace = true }
+forge-tui = { workspace = true }
+
+clap = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

@@ -1,0 +1,62 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/forge-config",
+    "crates/forge-core",
+    "crates/forge-traffic",
+    "crates/forge-discovery",
+    "crates/forge-health",
+    "crates/forge-security",
+    "crates/forge-daemon",
+    "crates/forge-conformance",
+    "crates/forge-tui",
+    "crates/forge-mcp",
+]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/BOHICA-LABS/forge-mcp"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+thiserror = "2"
+
+# Logging / tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# MCP protocol (forge-core only)
+rmcp = { version = "1", features = ["client", "server"] }
+
+# TUI (forge-tui only)
+ratatui = "0.30"
+crossterm = "0.29"
+
+# CLI (forge-mcp binary only)
+clap = { version = "4", features = ["derive"] }
+
+# Internal crates
+forge-config = { path = "crates/forge-config" }
+forge-core = { path = "crates/forge-core" }
+forge-traffic = { path = "crates/forge-traffic" }
+forge-discovery = { path = "crates/forge-discovery" }
+forge-health = { path = "crates/forge-health" }
+forge-security = { path = "crates/forge-security" }
+forge-daemon = { path = "crates/forge-daemon" }
+forge-conformance = { path = "crates/forge-conformance" }
+forge-tui = { path = "crates/forge-tui" }
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
+opt-level = "z"
