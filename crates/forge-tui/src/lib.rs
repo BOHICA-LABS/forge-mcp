@@ -12,3 +12,5 @@
 //! - Provide a `Tui` type that owns the terminal and event loop
 //! - Support live refresh from daemon IPC or direct server connections
 //! - Export screenshots to PNG/SVG for documentation and reporting
+
+pub mod dialogs;

@@ -120,6 +120,15 @@ pub enum CoreError {
         reason: String,
     },
 
+    /// E-PRO-008: Elicitation request received in non-interactive mode.
+    ///
+    /// Per DEC-017: when the client is running in CLI / headless mode (no TUI),
+    /// `elicitation/create` requests cannot be fulfilled and are rejected with
+    /// this error. The server should treat this as a terminal failure for the
+    /// operation that required elicitation.
+    #[error("E-PRO-008: elicitation request received in non-interactive mode")]
+    ElicitationNonInteractive,
+
     // ── Generic / other ───────────────────────────────────────────────────
 
     /// An I/O error that doesn't map to a more specific code.
