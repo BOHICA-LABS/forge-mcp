@@ -56,3 +56,7 @@ path = "tests/prompt_tests.rs"
 [[test]]
 name = "sampling_proxy_tests"
 path = "tests/sampling_proxy_tests.rs"
+
+[[test]]
+name = "progress_cancel_tests"
+path = "tests/progress_cancel_tests.rs"
