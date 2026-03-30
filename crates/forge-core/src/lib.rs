@@ -13,12 +13,14 @@
 
 pub mod connection;
 pub mod error;
+pub mod lifecycle;
 pub mod transport;
 pub mod types;
 
 // Convenience re-exports for callers.
 pub use connection::{ConnectionState, McpConnection, TransportKind};
 pub use error::{CoreError, ForgeError, Result};
+pub use lifecycle::{ConnectionLifecycleConfig, ConnectionManager, PingFn, close_with_timeout};
 pub use transport::{connect_http, connect_stdio, connect_stdio_with_timeout, DEFAULT_CONNECT_TIMEOUT_SECS};
 pub use types::{
     ConfigSource, ConflictRecord, ConflictSource, EditorKind, HttpConfig, ServerEntry,

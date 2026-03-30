@@ -70,7 +70,7 @@ async fn test_BC_1_02_001_stdio_connect_success() {
     assert_eq!(conn.server_version(), "0.1.0");
 
     // Capabilities must be available.
-    let info = conn.server_info();
+    let info = conn.server_info().expect("server_info must be present after init");
     assert!(info.capabilities.tools.is_some(), "server should advertise tools capability");
     assert!(info.capabilities.resources.is_some(), "server should advertise resources capability");
 

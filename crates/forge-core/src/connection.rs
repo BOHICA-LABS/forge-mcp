@@ -292,6 +292,7 @@ impl<H: ClientHandler> McpConnection<H> {
 
 #[cfg(test)]
 mod state_machine_tests {
+    #![allow(non_snake_case)]
     use super::*;
 
     #[test]
