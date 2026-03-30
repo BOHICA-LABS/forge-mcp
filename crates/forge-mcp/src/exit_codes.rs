@@ -14,6 +14,7 @@
 use forge_core::error::CoreError;
 
 /// Successful operation; all assertions passed.
+#[allow(dead_code)] // used in tests; will be used by future stories
 pub const EXIT_SUCCESS: i32 = 0;
 
 /// A conformance or `test` subcommand failure was detected.
@@ -30,6 +31,10 @@ pub const EXIT_SECURITY_FINDING: i32 = 4;
 
 /// Top-level CLI error type that wraps all subsystem errors so that
 /// [`exit_code_for_error`] can dispatch over a single enum.
+///
+/// Variants that are only constructed in tests today will be used by
+/// STORY-026 (test/audit handlers) and future stories.
+#[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum CliError {
