@@ -47,3 +47,7 @@ path = "tests/version_degradation_tests.rs"
 [[test]]
 name = "resource_tests"
 path = "tests/resource_tests.rs"
+
+[[test]]
+name = "prompt_tests"
+path = "tests/prompt_tests.rs"
