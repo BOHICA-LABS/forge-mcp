@@ -427,14 +427,16 @@ pub fn counting_factory(counter: Arc<AtomicUsize>) -> ConnectionFactory {
     })
 }
 
+/// Type alias for the queue used by [`queued_factory`] to reduce complexity.
+#[doc(hidden)]
+pub type ConnectionQueue = Arc<Mutex<Vec<Result<Box<dyn PoolableConnection>, DaemonError>>>>;
+
 /// Build a factory backed by a LIFO queue of pre-built connections.
 ///
 /// Each call pops the next connection from the back. `vec![c1, c2]` → first
 /// call returns `c2`, second call returns `c1`.
 #[doc(hidden)]
-pub fn queued_factory(
-    queue: Arc<Mutex<Vec<Result<Box<dyn PoolableConnection>, DaemonError>>>>,
-) -> ConnectionFactory {
+pub fn queued_factory(queue: ConnectionQueue) -> ConnectionFactory {
     Arc::new(move |_server: &str| {
         let q = Arc::clone(&queue);
         Box::pin(async move {

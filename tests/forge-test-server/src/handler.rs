@@ -204,202 +204,180 @@ impl ServerHandler for MockServer {
             .with_server_info(Implementation::new("forge-test-server", "0.1.0"))
     }
 
-    fn list_tools(
+    async fn list_tools(
         &self,
         request: Option<PaginatedRequestParams>,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<ListToolsResult, McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            self.tool_list_calls.fetch_add(1, Ordering::Relaxed);
-            let all_tools = self.build_tools();
-            let cursor = request.as_ref().and_then(|r| r.cursor.as_deref());
-            let (tools, next_cursor) = self.paginate(&all_tools, cursor);
-            Ok(ListToolsResult {
-                tools,
-                next_cursor,
-                meta: None,
-            })
-        }
+    ) -> Result<ListToolsResult, McpError> {
+        self.maybe_delay().await;
+        self.tool_list_calls.fetch_add(1, Ordering::Relaxed);
+        let all_tools = self.build_tools();
+        let cursor = request.as_ref().and_then(|r| r.cursor.as_deref());
+        let (tools, next_cursor) = self.paginate(&all_tools, cursor);
+        Ok(ListToolsResult {
+            tools,
+            next_cursor,
+            meta: None,
+        })
     }
 
-    fn call_tool(
+    async fn call_tool(
         &self,
         request: CallToolRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<CallToolResult, McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            self.maybe_crash();
+    ) -> Result<CallToolResult, McpError> {
+        self.maybe_delay().await;
+        self.maybe_crash();
 
-            let tool_name = &request.name;
+        let tool_name = &request.name;
 
-            let tool_exists = self.config.tools.iter().any(|t| t.name == *tool_name);
-            if !tool_exists {
-                return Err(McpError::invalid_params(
-                    format!("Unknown tool: {tool_name}"),
-                    None,
-                ));
-            }
-
-            if self.config.error_injection.error_tool_result {
-                return Ok(CallToolResult::error(vec![Content::text(format!(
-                    "Injected error for tool: {tool_name}"
-                ))]));
-            }
-
-            Ok(CallToolResult::success(vec![Content::text(format!(
-                "Mock result from {tool_name}"
-            ))]))
+        let tool_exists = self.config.tools.iter().any(|t| t.name == *tool_name);
+        if !tool_exists {
+            return Err(McpError::invalid_params(
+                format!("Unknown tool: {tool_name}"),
+                None,
+            ));
         }
+
+        if self.config.error_injection.error_tool_result {
+            return Ok(CallToolResult::error(vec![Content::text(format!(
+                "Injected error for tool: {tool_name}"
+            ))]));
+        }
+
+        Ok(CallToolResult::success(vec![Content::text(format!(
+            "Mock result from {tool_name}"
+        ))]))
     }
 
-    fn list_resources(
+    async fn list_resources(
         &self,
         request: Option<PaginatedRequestParams>,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<ListResourcesResult, McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            let all = self.build_resources();
-            let cursor = request.as_ref().and_then(|r| r.cursor.as_deref());
-            let (resources, next_cursor) = self.paginate(&all, cursor);
-            Ok(ListResourcesResult {
-                resources,
-                next_cursor,
-                meta: None,
-            })
-        }
+    ) -> Result<ListResourcesResult, McpError> {
+        self.maybe_delay().await;
+        let all = self.build_resources();
+        let cursor = request.as_ref().and_then(|r| r.cursor.as_deref());
+        let (resources, next_cursor) = self.paginate(&all, cursor);
+        Ok(ListResourcesResult {
+            resources,
+            next_cursor,
+            meta: None,
+        })
     }
 
-    fn read_resource(
+    async fn read_resource(
         &self,
         request: ReadResourceRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<ReadResourceResult, McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            let uri = &request.uri;
-            let resource = self.config.resources.iter().find(|r| r.uri == *uri);
-            match resource {
-                Some(r) => Ok(ReadResourceResult::new(vec![
-                    ResourceContents::TextResourceContents {
-                        uri: r.uri.clone(),
-                        mime_type: Some("text/plain".to_string()),
-                        text: r.content.clone(),
-                        meta: None,
-                    },
-                ])),
-                None => Err(McpError::invalid_params(
-                    format!("Unknown resource URI: {uri}"),
-                    None,
-                )),
-            }
+    ) -> Result<ReadResourceResult, McpError> {
+        self.maybe_delay().await;
+        let uri = &request.uri;
+        let resource = self.config.resources.iter().find(|r| r.uri == *uri);
+        match resource {
+            Some(r) => Ok(ReadResourceResult::new(vec![
+                ResourceContents::TextResourceContents {
+                    uri: r.uri.clone(),
+                    mime_type: Some("text/plain".to_string()),
+                    text: r.content.clone(),
+                    meta: None,
+                },
+            ])),
+            None => Err(McpError::invalid_params(
+                format!("Unknown resource URI: {uri}"),
+                None,
+            )),
         }
     }
 
-    fn subscribe(
+    async fn subscribe(
         &self,
         _request: SubscribeRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<(), McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            Ok(())
-        }
+    ) -> Result<(), McpError> {
+        self.maybe_delay().await;
+        Ok(())
     }
 
-    fn unsubscribe(
+    async fn unsubscribe(
         &self,
         _request: UnsubscribeRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<(), McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            Ok(())
-        }
+    ) -> Result<(), McpError> {
+        self.maybe_delay().await;
+        Ok(())
     }
 
-    fn list_prompts(
+    async fn list_prompts(
         &self,
         request: Option<PaginatedRequestParams>,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<ListPromptsResult, McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            let all = self.build_prompts();
-            let cursor = request.as_ref().and_then(|r| r.cursor.as_deref());
-            let (prompts, next_cursor) = self.paginate(&all, cursor);
-            Ok(ListPromptsResult {
-                prompts,
-                next_cursor,
-                meta: None,
-            })
-        }
+    ) -> Result<ListPromptsResult, McpError> {
+        self.maybe_delay().await;
+        let all = self.build_prompts();
+        let cursor = request.as_ref().and_then(|r| r.cursor.as_deref());
+        let (prompts, next_cursor) = self.paginate(&all, cursor);
+        Ok(ListPromptsResult {
+            prompts,
+            next_cursor,
+            meta: None,
+        })
     }
 
-    fn get_prompt(
+    async fn get_prompt(
         &self,
         request: GetPromptRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<GetPromptResult, McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            let name = &request.name;
-            let prompt = self.config.prompts.iter().find(|p| p.name == *name);
-            match prompt {
-                Some(p) => {
-                    let msg = PromptMessage::new_text(
-                        PromptMessageRole::Assistant,
-                        format!("Mock response for prompt: {}", p.name),
-                    );
-                    Ok(GetPromptResult::new(vec![msg]))
-                }
-                None => Err(McpError::invalid_params(
-                    format!("Unknown prompt: {name}"),
-                    None,
-                )),
+    ) -> Result<GetPromptResult, McpError> {
+        self.maybe_delay().await;
+        let name = &request.name;
+        let prompt = self.config.prompts.iter().find(|p| p.name == *name);
+        match prompt {
+            Some(p) => {
+                let msg = PromptMessage::new_text(
+                    PromptMessageRole::Assistant,
+                    format!("Mock response for prompt: {}", p.name),
+                );
+                Ok(GetPromptResult::new(vec![msg]))
             }
+            None => Err(McpError::invalid_params(
+                format!("Unknown prompt: {name}"),
+                None,
+            )),
         }
     }
 
-    fn complete(
+    async fn complete(
         &self,
         _request: CompleteRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<CompleteResult, McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            let info = CompletionInfo::new(vec!["mock-completion".to_string()])
-                .expect("always valid");
-            Ok(CompleteResult::new(info))
-        }
+    ) -> Result<CompleteResult, McpError> {
+        self.maybe_delay().await;
+        let info = CompletionInfo::new(vec!["mock-completion".to_string()])
+            .expect("always valid");
+        Ok(CompleteResult::new(info))
     }
 
-    fn set_level(
+    async fn set_level(
         &self,
         _request: SetLevelRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<(), McpError>> + '_ {
-        async move {
-            self.maybe_delay().await;
-            Ok(())
-        }
+    ) -> Result<(), McpError> {
+        self.maybe_delay().await;
+        Ok(())
     }
 
-    fn ping(
+    async fn ping(
         &self,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<(), McpError>> + '_ {
-        async move { Ok(()) }
+    ) -> Result<(), McpError> {
+        Ok(())
     }
 
-    fn on_initialized(
+    async fn on_initialized(
         &self,
         _context: NotificationContext<RoleServer>,
-    ) -> impl std::future::Future<Output = ()> + '_ {
-        async move {
-            tracing::info!("forge-test-server: client initialized");
-        }
+    ) {
+        tracing::info!("forge-test-server: client initialized");
     }
 }

@@ -82,22 +82,13 @@ impl MockCapabilities {
 }
 
 /// Cursor-based pagination configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PaginationConfig {
     /// Maximum items to return per page. 0 means no pagination (all at once).
     pub page_size: usize,
     /// When true, always return the same cursor (simulates an infinite loop
     /// for testing client-side loop-detection).
     pub loop_cursor: bool,
-}
-
-impl Default for PaginationConfig {
-    fn default() -> Self {
-        Self {
-            page_size: 0,
-            loop_cursor: false,
-        }
-    }
 }
 
 /// Error injection configuration.

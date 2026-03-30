@@ -15,6 +15,8 @@ pub mod connection;
 pub mod error;
 pub mod handler;
 pub mod lifecycle;
+pub mod pagination;
+pub mod protocol;
 pub mod transport;
 pub mod types;
 
@@ -34,3 +36,5 @@ pub use types::{
     TransportConfig, features_for_version,
 };
 pub use connection::MCP_LATEST_VERSION;
+pub use pagination::{MAX_PAGES, PaginationState, PaginationStep};
+pub use protocol::{ToolListInvalidator, ToolListWatcher, ToolResult, call_tool, list_tools};

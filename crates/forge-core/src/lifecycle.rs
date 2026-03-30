@@ -223,10 +223,10 @@ impl ConnectionManager {
     /// Remove a connection entry entirely.
     pub async fn remove(&self, key: &str) {
         let mut entries = self.entries.lock().await;
-        if let Some(entry) = entries.remove(key) {
-            if let Some(handle) = entry.keepalive_handle {
-                handle.abort();
-            }
+        if let Some(entry) = entries.remove(key)
+            && let Some(handle) = entry.keepalive_handle
+        {
+            handle.abort();
         }
     }
 

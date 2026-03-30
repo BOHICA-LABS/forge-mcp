@@ -18,6 +18,7 @@ rmcp = { workspace = true }
 tokio-util = { version = "0.7" }
 http = "1"
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+jsonschema = { version = "0.45", default-features = false }
 
 [dev-dependencies]
 forge-test-http-server = { path = "../../tests/forge-test-http-server" }
@@ -25,6 +26,10 @@ tokio = { workspace = true }
 rmcp = { workspace = true }
 tokio-util = { version = "0.7" }
 tempfile = "3"
+
+[[test]]
+name = "protocol_tests"
+path = "tests/protocol_tests.rs"
 
 [[test]]
 name = "transport_tests"
