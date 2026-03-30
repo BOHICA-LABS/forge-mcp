@@ -17,7 +17,7 @@ tracing = { workspace = true }
 rmcp = { workspace = true }
 tokio-util = { version = "0.7" }
 http = "1"
-reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
 jsonschema = { version = "0.45", default-features = false }
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 
@@ -27,6 +27,7 @@ tokio = { workspace = true }
 rmcp = { workspace = true }
 tokio-util = { version = "0.7" }
 tempfile = "3"
+wiremock = "0.6"
 
 [[test]]
 name = "protocol_tests"
@@ -51,3 +52,7 @@ path = "tests/resource_tests.rs"
 [[test]]
 name = "prompt_tests"
 path = "tests/prompt_tests.rs"
+
+[[test]]
+name = "sampling_proxy_tests"
+path = "tests/sampling_proxy_tests.rs"
