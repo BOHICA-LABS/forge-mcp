@@ -57,8 +57,8 @@ async fn test_BC_1_02_002_http_connect_success() {
 
     // Connection must be in Connected state
     assert_eq!(
-        conn.state(),
-        &forge_core::connection::ConnectionState::Connected,
+        *conn.state(),
+        forge_core::connection::ConnectionState::Connected,
         "connection should be Connected after successful handshake"
     );
 
@@ -124,7 +124,7 @@ async fn test_BC_1_02_002_custom_headers_sent() {
         .expect("connect_http with custom headers should succeed");
 
     // If connection succeeds, headers were forwarded without breaking the protocol
-    assert_eq!(conn.state(), &forge_core::connection::ConnectionState::Connected);
+    assert_eq!(*conn.state(), forge_core::connection::ConnectionState::Connected);
 
     conn.cancel();
     ct.cancel();
@@ -186,7 +186,7 @@ async fn test_BC_1_02_002_insecure_http_warning() {
         .await
         .expect("http:// connection should proceed with warning, not fail");
 
-    assert_eq!(conn.state(), &forge_core::connection::ConnectionState::Connected);
+    assert_eq!(*conn.state(), forge_core::connection::ConnectionState::Connected);
 
     conn.cancel();
     ct.cancel();

@@ -11,6 +11,7 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use http::{HeaderName, HeaderValue};
 use rmcp::ServiceExt;
+use rmcp::model::{ClientCapabilities, ClientInfo, Implementation};
 use rmcp::transport::TokioChildProcess;
 use rmcp::transport::streamable_http_client::{
     StreamableHttpClientTransport, StreamableHttpClientTransportConfig,
@@ -20,9 +21,56 @@ use tracing::warn;
 
 use crate::connection::{McpConnection, TransportKind};
 use crate::error::{CoreError, Result};
+use crate::types::NegotiatedCapabilities;
 
 /// Default timeout for the MCP `initialize` handshake.
 pub const DEFAULT_CONNECT_TIMEOUT_SECS: u64 = 30;
+
+// ── Forge MCP client identity & capabilities ─────────────────────────────────
+
+/// Build the `ClientInfo` that Forge MCP advertises in every `initialize` request.
+///
+/// Per AC-004 / BC-2.04.002, Forge MCP advertises:
+/// - `sampling: {}` — we can handle `sampling/createMessage` from servers
+/// - `elicitation: {}` — we can handle `elicitation/create` from servers
+/// - `roots: { listChanged: true }` — we expose filesystem roots and notify on changes
+///
+/// rmcp's `ClientCapabilities::builder()` pattern is used exclusively (AD-002, DI-004).
+fn forge_client_info() -> ClientInfo {
+    // Build capabilities via rmcp's builder (AC-005 compliance: no hand-rolled JSON).
+    let caps = ClientCapabilities::builder()
+        .enable_sampling()
+        .enable_elicitation()
+        .enable_roots()
+        .enable_roots_list_changed()
+        .build();
+
+    ClientInfo::new(caps, Implementation::new("forge-mcp", env!("CARGO_PKG_VERSION")))
+}
+
+/// Extract `NegotiatedCapabilities` from a freshly-established `RunningService`.
+///
+/// rmcp stores the `InitializeResult` returned by the server in `Peer::peer_info()`.
+/// We read it here to build our Forge-specific wrapper. If `peer_info()` is absent
+/// (should never happen after a successful `serve()`) we fall back to empty defaults
+/// so the connection is still usable, just with no advertised capabilities.
+fn extract_capabilities_from_service(
+    service: &rmcp::service::RunningService<rmcp::RoleClient, ClientInfo>,
+    advertised_client_caps: &ClientCapabilities,
+) -> NegotiatedCapabilities {
+    let (server_caps, version) = service
+        .peer()
+        .peer_info()
+        .map(|info| {
+            (
+                info.capabilities.clone(),
+                info.protocol_version.to_string(),
+            )
+        })
+        .unwrap_or_default();
+
+    NegotiatedCapabilities::new(server_caps, advertised_client_caps.clone(), version)
+}
 
 // ── Stdio transport ──────────────────────────────────────────────────────────
 
@@ -32,6 +80,9 @@ pub const DEFAULT_CONNECT_TIMEOUT_SECS: u64 = 30;
 /// (merged on top of the calling process's environment), then performs
 /// the MCP initialize handshake.
 ///
+/// The client advertises Forge MCP's capabilities (sampling, elicitation,
+/// roots/listChanged) per AC-004 / BC-2.04.002.
+///
 /// # Errors
 /// - [`CoreError::ServerNotFound`] — command not found / spawn failed
 /// - [`CoreError::Timeout`] — initialize did not complete within `DEFAULT_CONNECT_TIMEOUT_SECS`
@@ -40,7 +91,7 @@ pub async fn connect_stdio(
     command: &str,
     args: &[String],
     env: &HashMap<String, String>,
-) -> Result<McpConnection> {
+) -> Result<McpConnection<ClientInfo>> {
     connect_stdio_with_timeout(command, args, env, DEFAULT_CONNECT_TIMEOUT_SECS).await
 }
 
@@ -50,7 +101,7 @@ pub async fn connect_stdio_with_timeout(
     args: &[String],
     env: &HashMap<String, String>,
     timeout_secs: u64,
-) -> Result<McpConnection> {
+) -> Result<McpConnection<ClientInfo>> {
     // ── 1. Build the command ─────────────────────────────────────────────────
     let mut cmd = Command::new(command);
     cmd.args(args);
@@ -77,9 +128,13 @@ pub async fn connect_stdio_with_timeout(
         }
     })?;
 
-    // ── 3. Perform the MCP initialize handshake with a timeout ───────────────
+    // ── 3. Build our client identity with Forge's capabilities (AC-004/AC-005)
+    let client_info = forge_client_info();
+    let advertised_caps = client_info.capabilities.clone();
+
+    // ── 4. Perform the MCP initialize handshake with a timeout ───────────────
     let timeout = Duration::from_secs(timeout_secs);
-    let serve_fut = ().serve(transport);
+    let serve_fut = client_info.serve(transport);
 
     let running = tokio::time::timeout(timeout, serve_fut)
         .await
@@ -88,8 +143,11 @@ pub async fn connect_stdio_with_timeout(
         })?
         .map_err(|e| CoreError::Protocol(e.to_string()))?;
 
-    // ── 4. Wrap in forge's McpConnection ────────────────────────────────────
-    Ok(McpConnection::new(running, command, TransportKind::Stdio))
+    // ── 5. Extract negotiated capabilities from the completed handshake ───────
+    let caps = extract_capabilities_from_service(&running, &advertised_caps);
+
+    // ── 6. Wrap in forge's McpConnection ────────────────────────────────────
+    Ok(McpConnection::new(running, command, TransportKind::Stdio, caps))
 }
 
 // ── HTTP transport ───────────────────────────────────────────────────────────
@@ -111,7 +169,7 @@ pub async fn connect_stdio_with_timeout(
 pub async fn connect_http(
     url: &str,
     headers: &HashMap<String, String>,
-) -> Result<McpConnection<()>> {
+) -> Result<McpConnection<ClientInfo>> {
     // ── 1. URL validation / scheme warning ─────────────────────────────────
     let effective_url = normalise_url(url)?;
 
@@ -132,12 +190,19 @@ pub async fn connect_http(
 
     let transport = StreamableHttpClientTransport::from_config(config);
 
-    // ── 4. Perform MCP initialize handshake ────────────────────────────────
-    let service = ().serve(transport).await.map_err(|e| {
+    // ── 4. Build our client identity with Forge's capabilities (AC-004/AC-005)
+    let client_info = forge_client_info();
+    let advertised_caps = client_info.capabilities.clone();
+
+    // ── 5. Perform MCP initialize handshake ────────────────────────────────
+    let service = client_info.serve(transport).await.map_err(|e| {
         classify_init_error(e, url)
     })?;
 
-    Ok(McpConnection::new(service, url, TransportKind::Http))
+    // ── 6. Extract negotiated capabilities ──────────────────────────────────
+    let caps = extract_capabilities_from_service(&service, &advertised_caps);
+
+    Ok(McpConnection::new(service, url, TransportKind::Http, caps))
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

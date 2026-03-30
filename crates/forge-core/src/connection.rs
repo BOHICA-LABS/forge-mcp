@@ -22,12 +22,13 @@ use rmcp::{
     ClientHandler, Peer, RoleClient,
     model::{
         CallToolRequestParams, CallToolResult, ListPromptsResult, ListResourcesResult,
-        ListToolsResult, ServerInfo,
+        ListToolsResult, ServerCapabilities, ServerInfo,
     },
     service::{QuitReason, RunningService},
 };
 
 use crate::error::{CoreError, Result};
+use crate::types::NegotiatedCapabilities;
 
 // ── Connection state (pure) ──────────────────────────────────────────────────
 
@@ -129,6 +130,11 @@ pub enum TransportKind {
 ///
 /// Wraps rmcp's `RunningService` and exposes Forge-specific metadata.
 /// On drop, rmcp's `DropGuard` cancels the service background task.
+///
+/// After the MCP `initialize` / `initialized` handshake completes, the
+/// negotiated capabilities are stored here and exposed through the
+/// `supports_*` accessor methods. These checks are **pure** — they read the
+/// stored data with no I/O.
 pub struct McpConnection<H: ClientHandler = ()> {
     service: RunningService<RoleClient, H>,
     state: ConnectionState,
@@ -136,6 +142,12 @@ pub struct McpConnection<H: ClientHandler = ()> {
     label: String,
     /// Which transport backs this connection.
     transport_kind: TransportKind,
+    /// The negotiated capabilities from the MCP initialize handshake.
+    ///
+    /// Populated by `transport.rs` immediately after `serve()` completes.
+    /// The `supports_*` methods consult this field; capability guards return
+    /// `Err(E-PRO-003)` when the required capability is absent.
+    capabilities: NegotiatedCapabilities,
 }
 
 impl<H: ClientHandler> fmt::Debug for McpConnection<H> {
@@ -144,22 +156,25 @@ impl<H: ClientHandler> fmt::Debug for McpConnection<H> {
             .field("state", &self.state)
             .field("label", &self.label)
             .field("transport_kind", &self.transport_kind)
+            .field("protocol_version", &self.capabilities.protocol_version)
             .finish_non_exhaustive()
     }
 }
 
 impl<H: ClientHandler> McpConnection<H> {
-    /// Create a new `McpConnection` from a running service.
+    /// Create a new `McpConnection` from a running service and negotiated capabilities.
     pub(crate) fn new(
         service: RunningService<RoleClient, H>,
         label: impl Into<String>,
         transport_kind: TransportKind,
+        capabilities: NegotiatedCapabilities,
     ) -> Self {
         Self {
             service,
             state: ConnectionState::Connected,
             label: label.into(),
             transport_kind,
+            capabilities,
         }
     }
 
@@ -213,10 +228,66 @@ impl<H: ClientHandler> McpConnection<H> {
         self.service.is_closed()
     }
 
+    // ── Capability negotiation accessors (pure) ───────────────────────────────
+
+    /// Returns the `ServerCapabilities` the server advertised during `initialize`.
+    ///
+    /// Callers should prefer the `supports_*` methods for boolean capability checks.
+    pub fn server_capabilities(&self) -> &ServerCapabilities {
+        &self.capabilities.server
+    }
+
+    /// Returns the protocol version string agreed during `initialize`
+    /// (e.g. `"2025-06-18"`).
+    pub fn protocol_version(&self) -> &str {
+        &self.capabilities.protocol_version
+    }
+
+    /// Returns `true` if the server advertised the `tools` capability.
+    ///
+    /// Pure check — no I/O.
+    pub fn supports_tools(&self) -> bool {
+        self.capabilities.server.tools.is_some()
+    }
+
+    /// Returns `true` if the server advertised the `resources` capability.
+    pub fn supports_resources(&self) -> bool {
+        self.capabilities.server.resources.is_some()
+    }
+
+    /// Returns `true` if the server advertised the `prompts` capability.
+    pub fn supports_prompts(&self) -> bool {
+        self.capabilities.server.prompts.is_some()
+    }
+
+    /// Returns `true` if the server advertised the `sampling` client-side capability.
+    ///
+    /// Note: `sampling` is a *client* capability (servers call `sampling/createMessage`
+    /// on clients that advertise it). This method checks whether *we* advertised
+    /// sampling support to the server during `initialize`.
+    pub fn supports_sampling(&self) -> bool {
+        self.capabilities.client.sampling.is_some()
+    }
+
+    /// Returns `true` if the server advertised the `logging` capability.
+    pub fn supports_logging(&self) -> bool {
+        self.capabilities.server.logging.is_some()
+    }
+
     // ── Queries ───────────────────────────────────────────────────────────────
 
     /// List the tools available on the connected server.
+    ///
+    /// # Errors
+    /// Returns `Err(E-PRO-003)` immediately (no network round-trip) if the
+    /// server did not advertise the `tools` capability during `initialize`.
     pub async fn list_tools(&self) -> Result<ListToolsResult> {
+        if !self.supports_tools() {
+            return Err(CoreError::CapabilityNotSupported {
+                method: "tools/list".to_string(),
+                capability: "tools".to_string(),
+            });
+        }
         self.service
             .peer()
             .list_tools(None)
@@ -225,7 +296,16 @@ impl<H: ClientHandler> McpConnection<H> {
     }
 
     /// List the resources available on the connected server.
+    ///
+    /// # Errors
+    /// Returns `Err(E-PRO-003)` if the server did not advertise `resources`.
     pub async fn list_resources(&self) -> Result<ListResourcesResult> {
+        if !self.supports_resources() {
+            return Err(CoreError::CapabilityNotSupported {
+                method: "resources/list".to_string(),
+                capability: "resources".to_string(),
+            });
+        }
         self.service
             .peer()
             .list_resources(None)
@@ -234,7 +314,16 @@ impl<H: ClientHandler> McpConnection<H> {
     }
 
     /// List the prompts available on the connected server.
+    ///
+    /// # Errors
+    /// Returns `Err(E-PRO-003)` if the server did not advertise `prompts`.
     pub async fn list_prompts(&self) -> Result<ListPromptsResult> {
+        if !self.supports_prompts() {
+            return Err(CoreError::CapabilityNotSupported {
+                method: "prompts/list".to_string(),
+                capability: "prompts".to_string(),
+            });
+        }
         self.service
             .peer()
             .list_prompts(None)
