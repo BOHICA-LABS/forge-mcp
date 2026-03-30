@@ -17,6 +17,8 @@ pub mod handler;
 pub mod lifecycle;
 pub mod pagination;
 pub mod protocol;
+pub mod resources;
+pub mod subscriptions;
 pub mod transport;
 pub mod types;
 
@@ -38,3 +40,5 @@ pub use types::{
 pub use connection::MCP_LATEST_VERSION;
 pub use pagination::{MAX_PAGES, PaginationState, PaginationStep};
 pub use protocol::{ToolListInvalidator, ToolListWatcher, ToolResult, call_tool, list_tools};
+pub use resources::{Resource, ResourceContent, ResourceData, list_resources, read_resource};
+pub use subscriptions::{ResourceSubscription, subscribe_resource, subscribe_resource_with_sender};

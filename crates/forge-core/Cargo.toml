@@ -19,6 +19,7 @@ tokio-util = { version = "0.7" }
 http = "1"
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
 jsonschema = { version = "0.45", default-features = false }
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 forge-test-http-server = { path = "../../tests/forge-test-http-server" }
@@ -42,3 +43,7 @@ path = "tests/capability_tests.rs"
 [[test]]
 name = "version_degradation_tests"
 path = "tests/version_degradation_tests.rs"
+
+[[test]]
+name = "resource_tests"
+path = "tests/resource_tests.rs"
