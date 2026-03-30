@@ -21,8 +21,8 @@ use std::fmt;
 use rmcp::{
     ClientHandler, Peer, RoleClient,
     model::{
-        CallToolRequestParams, CallToolResult, ListPromptsResult, ListResourcesResult,
-        ListToolsResult, ServerCapabilities, ServerInfo,
+        CallToolRequestParams, CallToolResult, GetPromptRequestParams, GetPromptResult,
+        ListPromptsResult, ListResourcesResult, ListToolsResult, ServerCapabilities, ServerInfo,
     },
     service::{QuitReason, RunningService},
 };
@@ -464,6 +464,39 @@ impl<H: ClientHandler> McpConnection<H> {
         self.service
             .peer()
             .list_prompts(None)
+            .await
+            .map_err(|e| CoreError::Protocol(e.to_string()))
+    }
+
+    /// Retrieve a prompt by name with optional arguments.
+    ///
+    /// # Errors
+    /// Returns `Err(E-PRO-003)` immediately (no network round-trip) if the
+    /// server did not advertise the `prompts` capability during `initialize`.
+    /// Returns `Err(E-PRO-001)` on transport / protocol errors.
+    pub async fn get_prompt(
+        &self,
+        name: impl Into<std::borrow::Cow<'static, str>>,
+        arguments: Option<serde_json::Value>,
+    ) -> Result<GetPromptResult> {
+        if !self.supports_prompts() {
+            return Err(CoreError::CapabilityNotSupported {
+                method: "prompts/get".to_string(),
+                capability: "prompts".to_string(),
+            });
+        }
+
+        let name_str = name.into().into_owned();
+        let params = match arguments {
+            Some(serde_json::Value::Object(map)) => {
+                GetPromptRequestParams::new(name_str).with_arguments(map)
+            }
+            _ => GetPromptRequestParams::new(name_str),
+        };
+
+        self.service
+            .peer()
+            .get_prompt(params)
             .await
             .map_err(|e| CoreError::Protocol(e.to_string()))
     }
