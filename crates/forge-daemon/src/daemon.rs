@@ -47,6 +47,10 @@ use tracing::{debug, error, info, warn};
 use crate::error::{DaemonError, Result};
 use crate::pool::{ConnectionFactory, PoolConfig, SessionPool};
 use crate::session::SessionId;
+use crate::socket::{
+    daemon_socket_path, pid_lock_path, resolve_socket_conflict,
+    write_pid_lock, SocketConflictResolution,
+};
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -55,60 +59,6 @@ pub const DAEMON_START_TIMEOUT_SECS: u64 = 3;
 
 /// How often to poll the socket path while waiting for daemon start.
 const SOCKET_POLL_INTERVAL_MS: u64 = 50;
-
-// ── Socket path ───────────────────────────────────────────────────────────────
-
-/// Returns the platform-appropriate daemon socket path.
-///
-/// Priority:
-/// 1. `$XDG_RUNTIME_DIR/forge-mcp/daemon.sock` (Linux with XDG)
-/// 2. `/tmp/forge-mcp-<uid>/daemon.sock` (macOS / fallback)
-pub fn daemon_socket_path() -> PathBuf {
-    #[cfg(unix)]
-    {
-        // Try XDG_RUNTIME_DIR first (Linux with logind).
-        if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
-            let mut p = PathBuf::from(xdg);
-            p.push("forge-mcp");
-            p.push("daemon.sock");
-            return p;
-        }
-
-        // Fallback: /tmp/forge-mcp-<uid>/daemon.sock
-        let uid = {
-            // Use nix if available; otherwise read /proc/self/status.
-            // Safe fallback: use process ID as a proxy (not UID) for tests.
-            #[cfg(target_os = "linux")]
-            {
-                // SAFETY: getuid() is always safe.
-                unsafe { libc_uid() }
-            }
-            #[cfg(not(target_os = "linux"))]
-            {
-                // macOS: use geteuid via std::process workaround.
-                std::process::id()
-            }
-        };
-
-        let mut p = PathBuf::from(format!("/tmp/forge-mcp-{uid}"));
-        p.push("daemon.sock");
-        p
-    }
-
-    #[cfg(windows)]
-    {
-        // Windows: use a named pipe path as a stub.
-        PathBuf::from(r"\\.\pipe\forge-mcp-daemon")
-    }
-}
-
-#[cfg(all(unix, target_os = "linux"))]
-unsafe fn libc_uid() -> u32 {
-    extern "C" {
-        fn getuid() -> u32;
-    }
-    getuid()
-}
 
 // ── IPC protocol types ─────────────────────────────────────────────────────────
 
@@ -205,8 +155,14 @@ impl DaemonServer {
 
     /// Run the daemon event loop.
     ///
-    /// Binds the socket, then accepts and handles connections until the process
-    /// is terminated.
+    /// Performs socket conflict detection before binding:
+    /// - If another daemon is alive (`UseExisting`), exits with Ok(()) — the
+    ///   caller should use the existing daemon (AC-002).
+    /// - If a stale socket was found, it is removed before binding (AC-001).
+    /// - On permission errors, returns `Err(DaemonError::LockAcquireFailed)` (E-DAE-004).
+    ///
+    /// After a successful bind, writes a PID lock file so future instances can
+    /// detect this daemon via the PID probe.
     #[cfg(unix)]
     pub async fn run(self) -> Result<()> {
         use tokio::net::UnixListener;
@@ -216,14 +172,40 @@ impl DaemonServer {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        // Remove stale socket if present.
-        let _ = tokio::fs::remove_file(&self.socket_path).await;
+        // ── Conflict detection (STORY-012) ────────────────────────────────────
+        match resolve_socket_conflict(&self.socket_path).await? {
+            None => {
+                // No existing socket — clean start.
+            }
+            Some(SocketConflictResolution::UseExisting) => {
+                // Another daemon is alive — log and return cleanly (AC-002).
+                info!(
+                    "Daemon already running at {} — skipping start",
+                    self.socket_path.display()
+                );
+                return Ok(());
+            }
+            Some(SocketConflictResolution::ReplacedStale) => {
+                // Stale socket was removed — proceed with fresh bind (AC-001).
+                info!(
+                    "Removed stale daemon socket at {}",
+                    self.socket_path.display()
+                );
+            }
+            Some(SocketConflictResolution::Failed(err)) => {
+                return Err(err);
+            }
+        }
 
         let listener = UnixListener::bind(&self.socket_path)
             .map_err(|e| DaemonError::SocketBind {
                 path: self.socket_path.display().to_string(),
                 cause: e.to_string(),
             })?;
+
+        // Write PID lock file alongside the socket.
+        let pid_path = pid_lock_path(&self.socket_path);
+        write_pid_lock(&pid_path).await?;
 
         info!("daemon listening on {:?}", self.socket_path);
 
@@ -588,6 +570,95 @@ mod tests {
         // Both branches produce a valid path ending in daemon.sock.
         let path = daemon_socket_path();
         assert!(path.to_string_lossy().ends_with("daemon.sock"));
+    }
+
+    // ── STORY-012: Conflict detection integration tests ───────────────────────
+
+    /// AC-001 (STORY-012): Stale socket is detected and replaced so the new
+    /// daemon can bind.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_BC_1_03_003_stale_socket_replaced_on_daemon_start() {
+        use crate::pool::{MockConnection, PoolableConnection};
+        use tempfile::TempDir;
+
+        let tmpdir = TempDir::new().expect("tempdir");
+        let sock = tmpdir.path().join("daemon.sock");
+
+        // Plant a stale socket file (no one listening).
+        tokio::fs::write(&sock, b"stale").await.expect("write stale");
+        assert!(sock.exists(), "stale file must exist before start");
+
+        let factory: ConnectionFactory = Arc::new(move |server: &str| {
+            let label = server.to_string();
+            Box::pin(async move { Ok(MockConnection::alive(label) as Box<dyn PoolableConnection>) })
+        });
+
+        let server = DaemonServer::with_config(
+            sock.clone(),
+            PoolConfig::default(),
+            factory,
+            Duration::from_secs(300),
+        );
+
+        // run() should detect the stale socket, remove it, and bind.
+        tokio::spawn(async move {
+            server.run().await.ok();
+        });
+
+        tokio::time::sleep(Duration::from_millis(150)).await;
+
+        // A real client should now be able to connect.
+        let client = DaemonClient::new(sock.clone());
+        assert!(client.is_alive().await, "daemon must be listening after stale cleanup");
+    }
+
+    /// AC-002 (STORY-012): If a daemon is already alive, DaemonServer::run
+    /// exits cleanly without disturbing the existing daemon.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_BC_1_03_003_live_daemon_not_displaced() {
+        use crate::pool::{MockConnection, PoolableConnection};
+        use tempfile::TempDir;
+
+        let tmpdir = TempDir::new().expect("tempdir");
+        let sock = tmpdir.path().join("daemon.sock");
+
+        // Start first daemon.
+        let factory1: ConnectionFactory = Arc::new(move |s: &str| {
+            let l = s.to_string();
+            Box::pin(async move { Ok(MockConnection::alive(l) as Box<dyn PoolableConnection>) })
+        });
+        let server1 = DaemonServer::with_config(
+            sock.clone(),
+            PoolConfig::default(),
+            factory1,
+            Duration::from_secs(300),
+        );
+        tokio::spawn(async move { server1.run().await.ok() });
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Verify first daemon is alive.
+        let client = DaemonClient::new(sock.clone());
+        assert!(client.is_alive().await, "first daemon must be alive");
+
+        // Start second daemon — must exit cleanly (UseExisting path).
+        let factory2: ConnectionFactory = Arc::new(move |s: &str| {
+            let l = s.to_string();
+            Box::pin(async move { Ok(MockConnection::alive(l) as Box<dyn PoolableConnection>) })
+        });
+        let server2 = DaemonServer::with_config(
+            sock.clone(),
+            PoolConfig::default(),
+            factory2,
+            Duration::from_secs(300),
+        );
+        // This should return Ok(()) immediately because the first daemon is alive.
+        let result = server2.run().await;
+        assert!(result.is_ok(), "second daemon start must succeed (UseExisting): {result:?}");
+
+        // First daemon must still be alive.
+        assert!(client.is_alive().await, "first daemon must still be alive after second start attempt");
     }
 
     // ── In-process daemon integration test (AC-001, AC-002) ──────────────────
