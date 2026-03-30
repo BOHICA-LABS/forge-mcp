@@ -27,7 +27,7 @@ pub mod types;
 // Convenience re-exports for callers.
 pub use connection::{ConnectionState, McpConnection, TransportKind};
 pub use error::{CoreError, ForgeError, Result};
-pub use handler::{ClientCapabilityConfig, ForgeClientHandler};
+pub use handler::{ClientCapabilityConfig, ForgeClientHandler, make_cancelled_result};
 pub use llm_proxy::{LlmProxy, LlmProxyConfig};
 pub use lifecycle::{ConnectionLifecycleConfig, ConnectionManager, PingFn, close_with_timeout};
 pub use transport::{

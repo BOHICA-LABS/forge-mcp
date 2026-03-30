@@ -110,10 +110,10 @@ where
     }
 
     // Return cached result if available.
-    if let Some(cache) = cache {
-        if let Some(cached) = cache.get() {
-            return Ok(cached);
-        }
+    if let Some(cache) = cache
+        && let Some(cached) = cache.get()
+    {
+        return Ok(cached);
     }
 
     // Paginate: collect all prompts across multiple pages.
