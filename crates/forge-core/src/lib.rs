@@ -23,6 +23,7 @@ pub mod resources;
 pub mod subscriptions;
 pub mod transport;
 pub mod types;
+pub mod utilities;
 
 // Convenience re-exports for callers.
 pub use connection::{ConnectionState, McpConnection, TransportKind};
@@ -46,3 +47,4 @@ pub use protocol::{ToolListInvalidator, ToolListWatcher, ToolResult, call_tool, 
 pub use resources::{Resource, ResourceContent, ResourceData, list_resources, read_resource};
 pub use subscriptions::{ResourceSubscription, subscribe_resource, subscribe_resource_with_sender};
 pub use prompts::{PromptCache, get_prompt, list_prompts_all};
+pub use utilities::{complete, list_roots, notify_roots_list_changed, set_log_level};

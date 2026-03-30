@@ -176,6 +176,12 @@ pub struct McpConnection<H: ClientHandler = ()> {
     /// version, this holds the `E-CON-006` warning error (informational only —
     /// the connection is live and using the server-reported version).
     version_warning: Option<CoreError>,
+    /// The root URIs that this client advertises to servers via `roots/list`.
+    ///
+    /// Populated at construction from `ClientCapabilityConfig::root_paths`.
+    /// Used by `protocol::list_roots()` to return the current roots without a
+    /// network round-trip (roots are a client-side concept).
+    pub(crate) root_uris: Vec<String>,
 }
 
 impl<H: ClientHandler> fmt::Debug for McpConnection<H> {
@@ -227,7 +233,22 @@ impl<H: ClientHandler> McpConnection<H> {
             capabilities,
             version_features,
             version_warning,
+            root_uris: vec![],
         }
+    }
+
+    /// Like `new` but also records the root URIs that will be returned by
+    /// `protocol::list_roots()`.
+    pub(crate) fn new_with_roots(
+        service: RunningService<RoleClient, H>,
+        label: impl Into<String>,
+        transport_kind: TransportKind,
+        capabilities: NegotiatedCapabilities,
+        root_uris: Vec<String>,
+    ) -> Self {
+        let mut conn = Self::new(service, label, transport_kind, capabilities);
+        conn.root_uris = root_uris;
+        conn
     }
 
     /// Create a `McpConnection` with an explicit proposed version for mismatch
@@ -260,6 +281,7 @@ impl<H: ClientHandler> McpConnection<H> {
             capabilities,
             version_features,
             version_warning,
+            root_uris: vec![],
         }
     }
 
@@ -347,6 +369,17 @@ impl<H: ClientHandler> McpConnection<H> {
     /// the client proposed and what the server reported.
     pub fn has_version_mismatch(&self) -> bool {
         self.version_warning.is_some()
+    }
+
+    /// Returns the `file://` URIs of the root paths this client is configured
+    /// to advertise to servers via `roots/list`.
+    ///
+    /// Returns an empty slice when no root paths were configured or when the
+    /// `roots` capability was not advertised.
+    ///
+    /// Used by [`crate::protocol::list_roots`].
+    pub fn root_uris(&self) -> Vec<String> {
+        self.root_uris.clone()
     }
 
     /// Returns `true` if the server advertised the `tools` capability
