@@ -11,10 +11,12 @@
 
 mod commands;
 mod exit_codes;
+pub(crate) mod output;
 
 use clap::Parser;
 use commands::Commands;
 use exit_codes::exit_code_for_error;
+use output::OutputFlags;
 
 /// Forge MCP — discover, inspect, and audit MCP servers.
 #[derive(Parser, Debug)]
@@ -25,15 +27,20 @@ use exit_codes::exit_code_for_error;
     long_about = None,
 )]
 struct Cli {
-    /// Increase verbosity (-v = debug, -vv = trace)
-    #[arg(short, long, action = clap::ArgAction::Count, global = true)]
+    /// Emit indented, human-readable JSON output.
+    #[arg(long, global = true)]
+    pretty: bool,
+
+    /// Enable extended output with metadata (larger, but more informative).
+    #[arg(long, action = clap::ArgAction::Count, global = true)]
     verbose: u8,
 
     #[command(subcommand)]
     command: Option<Commands>,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // ── 1. Parse args (fast path — no subsystem init) ───────────────────────
     let cli = Cli::parse();
 
@@ -44,11 +51,18 @@ fn main() {
         _ => tracing::Level::TRACE,
     };
     tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
         .with_max_level(level)
         .with_target(false)
         .init();
 
-    // ── 3. Dispatch ─────────────────────────────────────────────────────────
+    // ── 3. Build output flags ────────────────────────────────────────────────
+    let flags = OutputFlags {
+        pretty: cli.pretty,
+        verbose: cli.verbose > 0,
+    };
+
+    // ── 4. Dispatch ─────────────────────────────────────────────────────────
     let result = match &cli.command {
         None => {
             // No subcommand — print help and exit 0.
@@ -59,11 +73,11 @@ fn main() {
         }
         Some(cmd) => {
             tracing::debug!(?cmd, "dispatching subcommand");
-            commands::dispatch(cmd)
+            commands::dispatch(cmd, flags).await
         }
     };
 
-    // ── 4. Map errors → exit codes ──────────────────────────────────────────
+    // ── 5. Map errors → exit codes ──────────────────────────────────────────
     if let Err(err) = result {
         eprintln!("forge-mcp: error: {err}");
         std::process::exit(exit_code_for_error(&err));
