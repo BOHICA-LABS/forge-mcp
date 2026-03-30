@@ -14,7 +14,7 @@
 //! Auto-detection tries `mcpServers` first, then `servers`.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -82,7 +82,7 @@ fn convert_editor(editor: &DiscoveryEditorKind) -> EditorKind {
 /// returning `Err(ConfigError::EnvValueNotString)` on the first non-string value.
 fn extract_env(
     raw_env: HashMap<String, Value>,
-    path: &PathBuf,
+    path: &Path,
     server_name: &str,
 ) -> Result<HashMap<String, String>, ConfigError> {
     let mut out = HashMap::with_capacity(raw_env.len());
@@ -93,7 +93,7 @@ fn extract_env(
             }
             _ => {
                 return Err(ConfigError::EnvValueNotString {
-                    path: path.clone(),
+                    path: path.to_path_buf(),
                     server: server_name.to_owned(),
                     key,
                 });

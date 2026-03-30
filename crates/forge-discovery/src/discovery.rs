@@ -22,9 +22,9 @@ use crate::{
 /// # Parameters
 /// * `os`           – target OS; pass `Os::current()` for the running system.
 /// * `home`         – explicit home directory; pass `None` to auto-detect via
-///                    `dirs::home_dir()`.
+///   `dirs::home_dir()`.
 /// * `project_root` – optional project root for project/workspace-scoped
-///                    config files.  When `None`, those entries are omitted.
+///   config files.  When `None`, those entries are omitted.
 ///
 /// # Errors
 /// Returns `DiscoveryError::HomeDirectoryMissing` (`E-CFG-001`) when

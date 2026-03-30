@@ -53,22 +53,22 @@ pub enum SocketConflictResolution {
 /// I/O and has no side effects.
 pub fn daemon_socket_path() -> PathBuf {
     // 1. Explicit override (all platforms).
-    if let Ok(explicit) = std::env::var("FORGE_DAEMON_SOCKET") {
-        if !explicit.is_empty() {
-            return PathBuf::from(explicit);
-        }
+    if let Ok(explicit) = std::env::var("FORGE_DAEMON_SOCKET")
+        && !explicit.is_empty()
+    {
+        return PathBuf::from(explicit);
     }
 
     #[cfg(unix)]
     {
         // 2. XDG_RUNTIME_DIR (Linux with logind).
-        if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
-            if !xdg.is_empty() {
-                let mut p = PathBuf::from(xdg);
-                p.push("forge-mcp");
-                p.push("daemon.sock");
-                return p;
-            }
+        if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR")
+            && !xdg.is_empty()
+        {
+            let mut p = PathBuf::from(xdg);
+            p.push("forge-mcp");
+            p.push("daemon.sock");
+            return p;
         }
 
         // 3. TMPDIR or /tmp fallback (macOS / Linux without XDG).

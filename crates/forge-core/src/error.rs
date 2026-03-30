@@ -97,6 +97,29 @@ pub enum CoreError {
         capability: String,
     },
 
+    /// E-PRO-004: Pagination cursor loop detected.
+    ///
+    /// Emitted by the pagination iterator when the same cursor is seen twice
+    /// or the page limit (100) is reached, indicating an infinite-loop server.
+    #[error("E-PRO-004: pagination cursor loop detected after {pages} pages")]
+    PaginationCursorLoop {
+        /// Number of pages iterated before termination.
+        pages: usize,
+    },
+
+    /// E-PRO-005: Argument schema validation failed.
+    ///
+    /// Emitted by `call_tool` when the provided `arguments` do not conform to
+    /// the tool's `inputSchema`. Saves a round-trip by detecting invalid args
+    /// before sending the request to the server.
+    #[error("E-PRO-005: argument schema validation failed for tool '{tool}': {reason}")]
+    SchemaValidationFailed {
+        /// The tool whose schema rejected the arguments.
+        tool: String,
+        /// A human-readable explanation of the validation failure.
+        reason: String,
+    },
+
     // ── Generic / other ───────────────────────────────────────────────────
 
     /// An I/O error that doesn't map to a more specific code.

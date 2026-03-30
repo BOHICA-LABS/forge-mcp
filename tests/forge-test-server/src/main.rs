@@ -77,7 +77,7 @@ async fn main() {
 
     // If --emit-malformed: write garbage and exit — used by error-injection tests.
     if cli.emit_malformed {
-        print!("{{this is not valid json}}\n");
+        println!("{{this is not valid json}}");
         std::process::exit(0);
     }
 

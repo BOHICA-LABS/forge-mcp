@@ -35,7 +35,7 @@ impl SessionId {
     }
 
     /// Create a `SessionId` from a raw string (for testing / deserialization).
-    pub fn from_str(s: impl Into<String>) -> Self {
+    pub fn from_raw(s: impl Into<String>) -> Self {
         Self(s.into())
     }
 
@@ -77,7 +77,7 @@ mod tests {
     /// Session ID round-trips through `from_str` / `as_str`.
     #[test]
     fn test_session_id_round_trip() {
-        let id = SessionId::from_str("test-session-42");
+        let id = SessionId::from_raw("test-session-42");
         assert_eq!(id.as_str(), "test-session-42");
         assert_eq!(id.to_string(), "test-session-42");
     }

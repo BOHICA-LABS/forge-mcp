@@ -381,7 +381,7 @@ impl DaemonClient {
                 .ok_or_else(|| DaemonError::Ipc("missing server_name in response".to_string()))?;
 
             return Ok(SessionHandle {
-                session_id: SessionId::from_str(session_id),
+                session_id: SessionId::from_raw(session_id),
                 server_name: server_name.to_string(),
             });
         }
