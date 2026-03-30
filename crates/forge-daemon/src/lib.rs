@@ -10,3 +10,18 @@
 //! - Persist monitoring state to disk across restarts
 //! - Expose a Unix domain socket IPC interface for the CLI and TUI to query
 //! - Coordinate discovery, health checks, and security scans on a configurable schedule
+
+pub mod daemon;
+pub mod error;
+pub mod pool;
+pub mod session;
+
+// Convenience re-exports.
+pub use daemon::{
+    DaemonClient, DaemonServer, SessionHandle, daemon_socket_path,
+    get_or_start_daemon, get_or_start_daemon_at, request_connection,
+    DAEMON_START_TIMEOUT_SECS,
+};
+pub use error::{DaemonError, Result};
+pub use pool::{ConnectionFactory, PoolConfig, PoolableConnection, SessionPool};
+pub use session::SessionId;

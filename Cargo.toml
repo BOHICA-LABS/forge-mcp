@@ -50,6 +50,12 @@ clap = { version = "4", features = ["derive"] }
 # Order-preserving map (used by forge-discovery aggregator)
 indexmap = "2"
 
+# Futures combinators (used by forge-daemon)
+futures = "0.3"
+
+# Test utilities
+tempfile = "3"
+
 # Internal crates
 forge-config = { path = "crates/forge-config" }
 forge-core = { path = "crates/forge-core" }
