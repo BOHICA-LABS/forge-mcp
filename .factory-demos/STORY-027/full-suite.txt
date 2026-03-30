@@ -1,0 +1,15 @@
+$ cargo test --test capture_tests -- --nocapture
+   Finished `test` profile [unoptimized + debuginfo] target(s) in 0.37s
+    Running tests/capture_tests.rs (target/debug/deps/capture_tests-1edb0f36ea687908)
+
+running 7 tests
+proptest: FileFailurePersistence::SourceParallel set, but no source file known
+test test_capture_no_subscribers ... ok
+test test_BC_4_09_001_multiple_consumers ... ok
+test test_BC_4_09_001_all_messages_captured ... ok
+test test_capture_channel_lagged ... ok
+test test_capture_large_payload ... ok
+test test_capture_overhead_benchmark ... ok
+test test_BC_4_09_001_payload_content_integrity ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s

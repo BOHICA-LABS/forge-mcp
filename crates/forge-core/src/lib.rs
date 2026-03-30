@@ -30,6 +30,7 @@ pub mod utilities;
 pub use connection::MCP_LATEST_VERSION;
 pub use connection::{ConnectionState, McpConnection, TransportKind};
 pub use error::{CoreError, ForgeError, Result};
+pub use events::{CaptureChannel, MessageCaptured, MessageDirection, capture_message};
 pub use handler::{ClientCapabilityConfig, ForgeClientHandler, make_cancelled_result};
 pub use lifecycle::{ConnectionLifecycleConfig, ConnectionManager, PingFn, close_with_timeout};
 pub use llm_proxy::{LlmProxy, LlmProxyConfig};

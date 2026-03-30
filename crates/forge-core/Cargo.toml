@@ -20,6 +20,7 @@ http = "1"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
 jsonschema = { version = "0.45", default-features = false }
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 forge-test-http-server = { path = "../../tests/forge-test-http-server" }
@@ -28,6 +29,7 @@ rmcp = { workspace = true }
 tokio-util = { version = "0.7" }
 tempfile = "3"
 wiremock = "0.6"
+proptest = "1"
 
 [[test]]
 name = "protocol_tests"
@@ -60,3 +62,7 @@ path = "tests/sampling_proxy_tests.rs"
 [[test]]
 name = "progress_cancel_tests"
 path = "tests/progress_cancel_tests.rs"
+
+[[test]]
+name = "capture_tests"
+path = "tests/capture_tests.rs"

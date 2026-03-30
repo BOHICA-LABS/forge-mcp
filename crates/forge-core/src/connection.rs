@@ -28,6 +28,7 @@ use rmcp::{
 };
 
 use crate::error::{CoreError, Result};
+use crate::events::{MessageCaptured, MessageDirection, capture_message};
 use crate::types::{FeatureSet, NegotiatedCapabilities, features_for_version};
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -182,6 +183,12 @@ pub struct McpConnection<H: ClientHandler = ()> {
     /// Used by `protocol::list_roots()` to return the current roots without a
     /// network round-trip (roots are a client-side concept).
     pub(crate) root_uris: Vec<String>,
+    /// Optional broadcast sender for transparent message capture (STORY-027).
+    ///
+    /// When `Some`, every JSON-RPC message flowing through this connection
+    /// (both directions) is broadcast on this channel.  When `None`, capture
+    /// is disabled and no overhead is incurred.
+    pub(crate) capture_tx: Option<tokio::sync::broadcast::Sender<MessageCaptured>>,
 }
 
 impl<H: ClientHandler> fmt::Debug for McpConnection<H> {
@@ -234,6 +241,7 @@ impl<H: ClientHandler> McpConnection<H> {
             version_features,
             version_warning,
             root_uris: vec![],
+            capture_tx: None,
         }
     }
 
@@ -282,6 +290,7 @@ impl<H: ClientHandler> McpConnection<H> {
             version_features,
             version_warning,
             root_uris: vec![],
+            capture_tx: None,
         }
     }
 
@@ -456,11 +465,31 @@ impl<H: ClientHandler> McpConnection<H> {
                 capability: "tools".to_string(),
             });
         }
-        self.service
+        // AC-001: capture outbound request.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ClientToServer,
+                Some("tools/list".to_string()),
+                serde_json::json!({"jsonrpc":"2.0","method":"tools/list","params":null}),
+            );
+        }
+        let result = self
+            .service
             .peer()
             .list_tools(None)
             .await
-            .map_err(|e| CoreError::Protocol(e.to_string()))
+            .map_err(|e| CoreError::Protocol(e.to_string()))?;
+        // AC-001: capture inbound response.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ServerToClient,
+                None,
+                serde_json::to_value(&result).unwrap_or(serde_json::Value::Null),
+            );
+        }
+        Ok(result)
     }
 
     /// List the resources available on the connected server.
@@ -475,11 +504,31 @@ impl<H: ClientHandler> McpConnection<H> {
                 capability: "resources".to_string(),
             });
         }
-        self.service
+        // AC-001: capture outbound request.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ClientToServer,
+                Some("resources/list".to_string()),
+                serde_json::json!({"jsonrpc":"2.0","method":"resources/list","params":null}),
+            );
+        }
+        let result = self
+            .service
             .peer()
             .list_resources(None)
             .await
-            .map_err(|e| CoreError::Protocol(e.to_string()))
+            .map_err(|e| CoreError::Protocol(e.to_string()))?;
+        // AC-001: capture inbound response.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ServerToClient,
+                None,
+                serde_json::to_value(&result).unwrap_or(serde_json::Value::Null),
+            );
+        }
+        Ok(result)
     }
 
     /// List the prompts available on the connected server.
@@ -494,11 +543,31 @@ impl<H: ClientHandler> McpConnection<H> {
                 capability: "prompts".to_string(),
             });
         }
-        self.service
+        // AC-001: capture outbound request.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ClientToServer,
+                Some("prompts/list".to_string()),
+                serde_json::json!({"jsonrpc":"2.0","method":"prompts/list","params":null}),
+            );
+        }
+        let result = self
+            .service
             .peer()
             .list_prompts(None)
             .await
-            .map_err(|e| CoreError::Protocol(e.to_string()))
+            .map_err(|e| CoreError::Protocol(e.to_string()))?;
+        // AC-001: capture inbound response.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ServerToClient,
+                None,
+                serde_json::to_value(&result).unwrap_or(serde_json::Value::Null),
+            );
+        }
+        Ok(result)
     }
 
     /// Retrieve a prompt by name with optional arguments.
@@ -522,16 +591,36 @@ impl<H: ClientHandler> McpConnection<H> {
         let name_str = name.into().into_owned();
         let params = match arguments {
             Some(serde_json::Value::Object(map)) => {
-                GetPromptRequestParams::new(name_str).with_arguments(map)
+                GetPromptRequestParams::new(name_str.clone()).with_arguments(map)
             }
-            _ => GetPromptRequestParams::new(name_str),
+            _ => GetPromptRequestParams::new(name_str.clone()),
         };
 
-        self.service
+        // AC-001: capture outbound request.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ClientToServer,
+                Some("prompts/get".to_string()),
+                serde_json::json!({"jsonrpc":"2.0","method":"prompts/get","params":{"name": name_str}}),
+            );
+        }
+        let result = self
+            .service
             .peer()
             .get_prompt(params)
             .await
-            .map_err(|e| CoreError::Protocol(e.to_string()))
+            .map_err(|e| CoreError::Protocol(e.to_string()))?;
+        // AC-001: capture inbound response.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ServerToClient,
+                None,
+                serde_json::to_value(&result).unwrap_or(serde_json::Value::Null),
+            );
+        }
+        Ok(result)
     }
 
     /// Guard for `elicitation/create` — returns `Err(E-PRO-003)` if the
@@ -559,18 +648,53 @@ impl<H: ClientHandler> McpConnection<H> {
         name: impl Into<std::borrow::Cow<'static, str>>,
         arguments: Option<serde_json::Value>,
     ) -> Result<CallToolResult> {
-        let params = match arguments {
+        let name_cow: std::borrow::Cow<'static, str> = name.into();
+        let params = match &arguments {
             Some(serde_json::Value::Object(map)) => {
-                CallToolRequestParams::new(name).with_arguments(map)
+                CallToolRequestParams::new(name_cow.clone()).with_arguments(map.clone())
             }
-            _ => CallToolRequestParams::new(name),
+            _ => CallToolRequestParams::new(name_cow.clone()),
         };
 
-        self.service
+        // AC-001: capture outbound request.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ClientToServer,
+                Some("tools/call".to_string()),
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": "tools/call",
+                    "params": {"name": name_cow.as_ref(), "arguments": arguments}
+                }),
+            );
+        }
+        let result = self
+            .service
             .peer()
             .call_tool(params)
             .await
-            .map_err(|e| CoreError::Protocol(e.to_string()))
+            .map_err(|e| CoreError::Protocol(e.to_string()))?;
+        // AC-001: capture inbound response.
+        if let Some(tx) = &self.capture_tx {
+            capture_message(
+                tx,
+                MessageDirection::ServerToClient,
+                None,
+                serde_json::to_value(&result).unwrap_or(serde_json::Value::Null),
+            );
+        }
+        Ok(result)
+    }
+
+    // ── Message capture (STORY-027) ───────────────────────────────────────────
+
+    /// Install a capture channel on this connection.
+    ///
+    /// After calling this, every JSON-RPC message flowing through the connection
+    /// (both directions) will be broadcast on `tx`.
+    pub fn install_capture_hook(&mut self, tx: tokio::sync::broadcast::Sender<MessageCaptured>) {
+        self.capture_tx = Some(tx);
     }
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
