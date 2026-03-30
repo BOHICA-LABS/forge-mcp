@@ -274,7 +274,7 @@ impl<H: ClientHandler> McpConnection<H> {
     ///
     /// Alias for [`close`] that returns a `CoreError` on failure — matches
     /// the STORY-007 API used by existing test code.
-    pub async fn shutdown(self) -> crate::error::Result<()> {
+    pub async fn shutdown(mut self) -> crate::error::Result<()> {
         self.service
             .close()
             .await
