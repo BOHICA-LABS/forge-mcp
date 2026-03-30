@@ -18,6 +18,8 @@
 //! | Arguments fail schema validation | `Err(CoreError::SchemaValidationFailed)` |
 //! | Pagination cursor loop | `Err(CoreError::PaginationCursorLoop)` + warning |
 
+use std::fmt;
+
 use rmcp::{
     ClientHandler,
     model::{CallToolResult, PaginatedRequestParams, Tool},
@@ -57,6 +59,31 @@ impl From<CallToolResult> for ToolResult {
         Self {
             content: r.content,
             is_error: r.is_error.unwrap_or(false),
+        }
+    }
+}
+
+impl fmt::Display for ToolResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // AC-005: ✓ for success, ✗ for error.
+        let status = if self.is_error { "✗ error" } else { "✓ ok" };
+        // Render the first content item's text, if any, for context.
+        let preview: String = self
+            .content
+            .iter()
+            .filter_map(|c| {
+                // Extract text from Text variant; skip other content types.
+                match &c.raw {
+                    rmcp::model::RawContent::Text(t) => Some(t.text.clone()),
+                    _ => None,
+                }
+            })
+            .take(1)
+            .collect();
+        if preview.is_empty() {
+            write!(f, "{status}")
+        } else {
+            write!(f, "{status}: {preview}")
         }
     }
 }

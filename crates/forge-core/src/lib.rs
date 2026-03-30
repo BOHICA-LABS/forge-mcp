@@ -13,6 +13,7 @@
 
 pub mod connection;
 pub mod error;
+pub mod events;
 pub mod handler;
 pub mod lifecycle;
 pub mod llm_proxy;
