@@ -21,6 +21,7 @@ use tracing::warn;
 
 use crate::connection::{McpConnection, TransportKind};
 use crate::error::{CoreError, Result};
+use crate::handler::{ClientCapabilityConfig, ForgeClientHandler};
 use crate::types::NegotiatedCapabilities;
 
 /// Default timeout for the MCP `initialize` handshake.
@@ -56,6 +57,25 @@ fn forge_client_info() -> ClientInfo {
 /// so the connection is still usable, just with no advertised capabilities.
 fn extract_capabilities_from_service(
     service: &rmcp::service::RunningService<rmcp::RoleClient, ClientInfo>,
+    advertised_client_caps: &ClientCapabilities,
+) -> NegotiatedCapabilities {
+    let (server_caps, version) = service
+        .peer()
+        .peer_info()
+        .map(|info| {
+            (
+                info.capabilities.clone(),
+                info.protocol_version.to_string(),
+            )
+        })
+        .unwrap_or_default();
+
+    NegotiatedCapabilities::new(server_caps, advertised_client_caps.clone(), version)
+}
+
+/// Extract `NegotiatedCapabilities` from a `ForgeClientHandler`-backed service.
+fn extract_capabilities_from_forge_service(
+    service: &rmcp::service::RunningService<rmcp::RoleClient, ForgeClientHandler>,
     advertised_client_caps: &ClientCapabilities,
 ) -> NegotiatedCapabilities {
     let (server_caps, version) = service
@@ -148,6 +168,128 @@ pub async fn connect_stdio_with_timeout(
 
     // ── 6. Wrap in forge's McpConnection ────────────────────────────────────
     Ok(McpConnection::new(running, command, TransportKind::Stdio, caps))
+}
+
+// ── Configurable transports (STORY-014) ─────────────────────────────────────
+
+/// Connect to an MCP server via stdio transport with configurable client capabilities.
+///
+/// Like [`connect_stdio`] but accepts a [`ClientCapabilityConfig`] so the caller
+/// controls which capabilities (sampling, elicitation, roots) are advertised in
+/// the MCP `initialize` request.
+///
+/// Per AC-004 / BC-2.04.002: if no LLM proxy is configured, pass
+/// `ClientCapabilityConfig { enable_sampling: false, .. }` to suppress the
+/// `sampling` capability advertisement.
+///
+/// # Errors
+/// Same error codes as [`connect_stdio`].
+pub async fn connect_stdio_with_config(
+    command: &str,
+    args: &[String],
+    env: &HashMap<String, String>,
+    config: ClientCapabilityConfig,
+) -> Result<McpConnection<ForgeClientHandler>> {
+    connect_stdio_with_config_and_timeout(command, args, env, config, DEFAULT_CONNECT_TIMEOUT_SECS)
+        .await
+}
+
+/// Like [`connect_stdio_with_config`] but with an explicit timeout in seconds.
+pub async fn connect_stdio_with_config_and_timeout(
+    command: &str,
+    args: &[String],
+    env: &HashMap<String, String>,
+    config: ClientCapabilityConfig,
+    timeout_secs: u64,
+) -> Result<McpConnection<ForgeClientHandler>> {
+    // ── 1. Build the command ─────────────────────────────────────────────────
+    let mut cmd = Command::new(command);
+    cmd.args(args);
+
+    for (key, value) in env {
+        let expanded = expand_env_value(value);
+        cmd.env(key, expanded);
+    }
+
+    // ── 2. Spawn the child process ───────────────────────────────────────────
+    let transport = TokioChildProcess::new(cmd).map_err(|e| {
+        let msg = e.to_string();
+        if msg.contains("No such file or directory")
+            || msg.contains("not found")
+            || msg.contains("os error 2")
+        {
+            CoreError::ServerNotFound {
+                message: format!("{command}: {msg}"),
+            }
+        } else {
+            CoreError::Io(e)
+        }
+    })?;
+
+    // ── 3. Build handler with configurable capabilities ──────────────────────
+    let handler = ForgeClientHandler::new(config);
+    let advertised_caps = handler.client_info().capabilities.clone();
+
+    // ── 4. Perform the MCP initialize handshake with timeout ─────────────────
+    let timeout = Duration::from_secs(timeout_secs);
+    let serve_fut = handler.serve(transport);
+
+    let running = tokio::time::timeout(timeout, serve_fut)
+        .await
+        .map_err(|_| CoreError::ConnectionTimeout {
+            seconds: timeout_secs,
+        })?
+        .map_err(|e| CoreError::Protocol(e.to_string()))?;
+
+    // ── 5. Extract negotiated capabilities ────────────────────────────────────
+    let caps = extract_capabilities_from_forge_service(&running, &advertised_caps);
+
+    // ── 6. Wrap in McpConnection ─────────────────────────────────────────────
+    Ok(McpConnection::new(running, command, TransportKind::Stdio, caps))
+}
+
+/// Connect to an MCP server over HTTP with configurable client capabilities.
+///
+/// Like [`connect_http`] but accepts a [`ClientCapabilityConfig`].
+pub async fn connect_http_with_config(
+    url: &str,
+    headers: &HashMap<String, String>,
+    config: ClientCapabilityConfig,
+) -> Result<McpConnection<ForgeClientHandler>> {
+    // ── 1. URL validation ────────────────────────────────────────────────────
+    let effective_url = normalise_url(url)?;
+
+    // ── 2. Build custom headers ──────────────────────────────────────────────
+    let mut custom_headers: HashMap<HeaderName, HeaderValue> = HashMap::new();
+    for (name, value) in headers {
+        let header_name = HeaderName::from_bytes(name.as_bytes())
+            .map_err(|e| CoreError::Protocol(format!("invalid header name {name:?}: {e}")))?;
+        let header_value = HeaderValue::from_str(value)
+            .map_err(|e| CoreError::Protocol(format!("invalid header value for {name:?}: {e}")))?;
+        custom_headers.insert(header_name, header_value);
+    }
+
+    // ── 3. Build transport config ────────────────────────────────────────────
+    let transport_config =
+        StreamableHttpClientTransportConfig::with_uri(Arc::from(effective_url.as_str()))
+            .custom_headers(custom_headers)
+            .reinit_on_expired_session(true);
+
+    let transport = StreamableHttpClientTransport::from_config(transport_config);
+
+    // ── 4. Build handler with configurable capabilities ──────────────────────
+    let handler = ForgeClientHandler::new(config);
+    let advertised_caps = handler.client_info().capabilities.clone();
+
+    // ── 5. Perform MCP initialize handshake ──────────────────────────────────
+    let service = handler.serve(transport).await.map_err(|e| {
+        classify_init_error(e, url)
+    })?;
+
+    // ── 6. Extract negotiated capabilities ────────────────────────────────────
+    let caps = extract_capabilities_from_forge_service(&service, &advertised_caps);
+
+    Ok(McpConnection::new(service, url, TransportKind::Http, caps))
 }
 
 // ── HTTP transport ───────────────────────────────────────────────────────────

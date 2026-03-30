@@ -378,19 +378,27 @@ impl<H: ClientHandler> McpConnection<H> {
         self.capabilities.client.sampling.is_some()
     }
 
+    /// Returns `true` if we advertised the `elicitation` client capability.
+    ///
+    /// `elicitation` is a *client* capability — servers call `elicitation/create`
+    /// on clients that advertise it. This checks whether *we* advertised it,
+    /// **and** the negotiated spec version supports elicitation.
+    pub fn supports_elicitation(&self) -> bool {
+        self.capabilities.client.elicitation.is_some() && self.version_features.elicitation
+    }
+
+    /// Returns `true` if we advertised the `roots` client capability.
+    ///
+    /// `roots` is a *client* capability — servers call `roots/list` on clients
+    /// that advertise it. This checks whether *we* advertised it.
+    pub fn supports_roots(&self) -> bool {
+        self.capabilities.client.roots.is_some()
+    }
+
     /// Returns `true` if the server advertised the `logging` capability
     /// **and** the negotiated spec version supports logging.
     pub fn supports_logging(&self) -> bool {
         self.capabilities.server.logging.is_some() && self.version_features.logging
-    }
-
-    /// Returns `true` if the negotiated spec version supports `elicitation/create`.
-    ///
-    /// Elicitation is only available in spec versions `2025-11-25` and later.
-    /// This is a **version-only** guard — MCP does not have a separate server
-    /// capability flag for elicitation.
-    pub fn supports_elicitation(&self) -> bool {
-        self.version_features.elicitation
     }
 
     /// Returns `true` if the negotiated spec version supports streamable-HTTP transport.

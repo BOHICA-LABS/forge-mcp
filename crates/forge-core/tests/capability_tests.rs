@@ -1,15 +1,23 @@
-//! Integration tests for STORY-013: Bidirectional Capability Negotiation.
+//! Integration tests for STORY-013 & STORY-014: Bidirectional Capability Negotiation
+//! and Client Capability Advertisement.
 //!
 //! Tests verify that `McpConnection` correctly exposes the server's negotiated
-//! capabilities after the MCP `initialize` / `initialized` handshake completes.
+//! capabilities after the MCP `initialize` / `initialized` handshake completes,
+//! and that client capabilities are advertised based on `ClientCapabilityConfig`.
 //!
-//! AC coverage:
+//! STORY-013 AC coverage:
 //!   AC-001 — connect and verify capabilities match server advertisement
 //!   AC-002 — server with no tools → `supports_tools()` returns false
 //!   AC-003 — server with all capabilities → all checks return true
 //!   AC-004 — protocol version matches after handshake
 //!   AC-005 — `list_tools()` returns E-PRO-003 when server has no tools capability
 //!   AC-006 — `server_capabilities()` exposes the raw rmcp `ServerCapabilities`
+//!
+//! STORY-014 AC coverage:
+//!   AC-001 — sampling capability advertised when enabled
+//!   AC-002 — elicitation capability advertised when enabled
+//!   AC-003 — roots capability advertised when enabled
+//!   AC-004 — sampling NOT advertised when disabled (no LLM proxy configured)
 
 // BC-tracing test names intentionally use uppercase (BC-N-MM-NNN format).
 #![allow(non_snake_case)]
@@ -326,6 +334,134 @@ async fn test_BC_2_04_006_server_capabilities_raw_access() {
         raw.logging.is_some(),
         conn.supports_logging(),
         "server_capabilities().logging.is_some() must match supports_logging()"
+    );
+
+    conn.shutdown().await.ok();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STORY-014 tests: Configurable client capability advertisement
+// ─────────────────────────────────────────────────────────────────────────────
+
+use forge_core::{ClientCapabilityConfig, connect_stdio_with_config};
+
+// ── AC-001: sampling capability advertised when enabled ───────────────────────
+
+/// AC-001: When `ClientCapabilityConfig::enable_sampling = true`, the `initialize`
+/// request advertises `sampling: {}` and `supports_sampling()` returns true.
+#[tokio::test]
+async fn test_BC_2_04_002_sampling_capability_advertised() {
+    let bin = test_server_bin();
+    let env = HashMap::new();
+
+    let config = ClientCapabilityConfig {
+        enable_sampling: true,
+        enable_elicitation: false,
+        enable_roots: false,
+        root_paths: vec![],
+    };
+
+    let conn = connect_stdio_with_config(&bin, &[], &env, config)
+        .await
+        .expect("connect should succeed");
+
+    assert!(
+        conn.supports_sampling(),
+        "sampling capability should be advertised when enable_sampling=true"
+    );
+
+    conn.shutdown().await.ok();
+}
+
+// ── AC-002: elicitation capability advertised when enabled ────────────────────
+
+/// AC-002: When `ClientCapabilityConfig::enable_elicitation = true`, the `initialize`
+/// request advertises `elicitation: {}` and `supports_elicitation()` returns true.
+#[tokio::test]
+async fn test_BC_2_04_002_elicitation_capability_advertised() {
+    let bin = test_server_bin();
+    let env = HashMap::new();
+
+    let config = ClientCapabilityConfig {
+        enable_sampling: false,
+        enable_elicitation: true,
+        enable_roots: false,
+        root_paths: vec![],
+    };
+
+    let conn = connect_stdio_with_config(&bin, &[], &env, config)
+        .await
+        .expect("connect should succeed");
+
+    assert!(
+        conn.supports_elicitation(),
+        "elicitation capability should be advertised when enable_elicitation=true"
+    );
+
+    conn.shutdown().await.ok();
+}
+
+// ── AC-003: roots capability advertised when enabled ──────────────────────────
+
+/// AC-003: When `ClientCapabilityConfig::enable_roots = true`, the `initialize`
+/// request advertises `roots: { listChanged: true }` and `supports_roots()` returns true.
+#[tokio::test]
+async fn test_BC_2_04_002_roots_capability_advertised() {
+    let bin = test_server_bin();
+    let env = HashMap::new();
+
+    let root_path = std::env::temp_dir();
+    let config = ClientCapabilityConfig {
+        enable_sampling: false,
+        enable_elicitation: false,
+        enable_roots: true,
+        root_paths: vec![root_path.clone()],
+    };
+
+    let conn = connect_stdio_with_config(&bin, &[], &env, config)
+        .await
+        .expect("connect should succeed");
+
+    assert!(
+        conn.supports_roots(),
+        "roots capability should be advertised when enable_roots=true"
+    );
+
+    conn.shutdown().await.ok();
+}
+
+// ── AC-004: sampling NOT advertised without LLM proxy config ─────────────────
+
+/// AC-004: When `ClientCapabilityConfig::enable_sampling = false`, the `initialize`
+/// request does NOT include `sampling`, and `supports_sampling()` returns false.
+/// This prevents servers from sending unhandleable sampling requests.
+#[tokio::test]
+async fn test_BC_2_04_002_sampling_not_advertised_without_config() {
+    let bin = test_server_bin();
+    let env = HashMap::new();
+
+    let config = ClientCapabilityConfig {
+        enable_sampling: false,
+        enable_elicitation: false,
+        enable_roots: false,
+        root_paths: vec![],
+    };
+
+    let conn = connect_stdio_with_config(&bin, &[], &env, config)
+        .await
+        .expect("connect should succeed");
+
+    assert!(
+        !conn.supports_sampling(),
+        "sampling should NOT be advertised when enable_sampling=false"
+    );
+    assert!(
+        !conn.supports_elicitation(),
+        "elicitation should NOT be advertised when enable_elicitation=false"
+    );
+    assert!(
+        !conn.supports_roots(),
+        "roots should NOT be advertised when enable_roots=false"
     );
 
     conn.shutdown().await.ok();
