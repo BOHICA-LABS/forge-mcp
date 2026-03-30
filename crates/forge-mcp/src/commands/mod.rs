@@ -61,6 +61,12 @@ pub struct ListArgs {
     /// Output results as JSON.
     #[arg(long)]
     pub json: bool,
+
+    /// Separate each JSON record with a NUL byte (`\0`) instead of a newline.
+    ///
+    /// Enables `forge-mcp list | xargs -0 …` shell pipelines (AC-003).
+    #[arg(long)]
+    pub null_separated: bool,
 }
 
 /// Arguments for `forge-mcp call <server> <tool> [args]`.
@@ -171,6 +177,12 @@ fn parse_stdio_uri(uri: &str) -> Result<(String, Vec<String>), CliError> {
 /// - With a server URI → connect and list tools as `{ "tools": [...] }`.
 /// - Without a server URI → list discovered servers as `{ "servers": [...] }`.
 pub async fn handle_list(args: &ListArgs, flags: OutputFlags) -> Result<(), CliError> {
+    // AC-003 (STORY-025): merge per-subcommand null_separated into flags.
+    let flags = OutputFlags {
+        null_separated: args.null_separated,
+        ..flags
+    };
+
     match &args.server {
         Some(uri) => {
             // Connect and list tools.

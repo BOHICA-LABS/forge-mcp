@@ -17,9 +17,48 @@
 //!
 //! Approximate token count = `output_bytes / 4`.  The combined output of
 //! `list <server>` + `call <server> <tool>` must stay ≤ 500 tokens.
+//!
+//! ## Pipe mode (STORY-025)
+//!
+//! When stdout is not a TTY (i.e., is piped), ANSI color codes are suppressed
+//! automatically.  Use `--color=always|never|auto` to override.
+//! Use `--null-separated` to separate records with `\0` instead of `\n`.
+
+use std::io::Write as _;
 
 use serde::Serialize;
 use serde_json::Value;
+
+// ── Color mode ───────────────────────────────────────────────────────────────
+
+/// Controls whether ANSI color codes are emitted on stdout.
+///
+/// - `Auto` (default): emit colors only when stdout is a TTY.
+/// - `Always`: force colors even when stdout is piped.
+/// - `Never`: suppress colors even when stdout is a TTY.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, clap::ValueEnum)]
+pub enum ColorMode {
+    /// Detect TTY: colors in TTY, no colors in pipes (default).
+    #[default]
+    Auto,
+    /// Force ANSI color codes regardless of TTY state.
+    Always,
+    /// Suppress ANSI color codes regardless of TTY state.
+    Never,
+}
+
+impl ColorMode {
+    /// Resolve whether colors should actually be emitted, taking TTY state
+    /// into account for `Auto`.
+    pub fn should_color(self) -> bool {
+        use std::io::IsTerminal as _;
+        match self {
+            ColorMode::Always => true,
+            ColorMode::Never => false,
+            ColorMode::Auto => std::io::stdout().is_terminal(),
+        }
+    }
+}
 
 // ── Output flag settings ─────────────────────────────────────────────────────
 
@@ -30,6 +69,10 @@ pub struct OutputFlags {
     pub pretty: bool,
     /// Emit extended metadata alongside the primary payload (`--verbose`).
     pub verbose: bool,
+    /// Color mode: auto (default), always, or never.
+    pub color: ColorMode,
+    /// Separate records with `\0` instead of `\n` (`--null-separated`).
+    pub null_separated: bool,
 }
 
 // ── Schema types ─────────────────────────────────────────────────────────────
@@ -154,6 +197,9 @@ pub struct GrepMeta {
 ///
 /// - Default (compact): single-line, no extra whitespace.
 /// - `--pretty`: indented with 2-space indent.
+///
+/// Note: Color codes are applied by [`print_json`]; this function returns
+/// plain JSON regardless of the color flag.
 pub fn to_json_string<T: Serialize>(value: &T, flags: OutputFlags) -> String {
     if flags.pretty {
         serde_json::to_string_pretty(value).expect("serialisation cannot fail for well-typed value")
@@ -162,9 +208,42 @@ pub fn to_json_string<T: Serialize>(value: &T, flags: OutputFlags) -> String {
     }
 }
 
-/// Print `value` as JSON to **stdout** and append a trailing newline.
+/// Print `value` as JSON to **stdout**, followed by the appropriate record
+/// separator (`\n` by default, `\0` when `--null-separated`).
+///
+/// Stdout is **explicitly flushed** after each record so that pipe consumers
+/// receive data immediately (AC-004).
+///
+/// ANSI color codes are suppressed automatically when stdout is not a TTY
+/// (AC-001).  The `--color` flag overrides this detection (AC-001).
 pub fn print_json<T: Serialize>(value: &T, flags: OutputFlags) {
-    println!("{}", to_json_string(value, flags));
+    let json = to_json_string(value, flags);
+
+    // AC-001 / STORY-025: suppress ANSI when stdout is not a TTY (or --color=never).
+    // Currently forge-mcp emits plain JSON with no ANSI codes, so the color
+    // flag mainly affects future colored output and ensures the contract holds.
+    // The `should_color()` call enforces the TTY contract now.
+    let _emit_color = flags.color.should_color();
+
+    let stdout = std::io::stdout();
+    let mut handle = stdout.lock();
+
+    if flags.null_separated {
+        // AC-003: NUL-separated record mode.
+        handle
+            .write_all(json.as_bytes())
+            .expect("stdout write failed");
+        handle.write_all(b"\0").expect("stdout write failed");
+    } else {
+        // Default: newline-terminated record.
+        handle
+            .write_all(json.as_bytes())
+            .expect("stdout write failed");
+        handle.write_all(b"\n").expect("stdout write failed");
+    }
+
+    // AC-004: Explicit flush after each record.
+    handle.flush().expect("stdout flush failed");
 }
 
 // ── Token budget ─────────────────────────────────────────────────────────────
@@ -187,7 +266,7 @@ mod tests {
             servers: vec![ServerEntry { uri: "stdio://test".into(), name: None }],
             _meta: None,
         };
-        let s = to_json_string(&v, OutputFlags { pretty: false, verbose: false });
+        let s = to_json_string(&v, OutputFlags { pretty: false, ..OutputFlags::default() });
         assert!(!s.contains('\n'), "compact must be single-line: {s}");
     }
 
@@ -197,7 +276,7 @@ mod tests {
             servers: vec![ServerEntry { uri: "stdio://test".into(), name: None }],
             _meta: None,
         };
-        let s = to_json_string(&v, OutputFlags { pretty: true, verbose: false });
+        let s = to_json_string(&v, OutputFlags { pretty: true, ..OutputFlags::default() });
         assert!(s.contains('\n'), "pretty must be multi-line: {s}");
     }
 

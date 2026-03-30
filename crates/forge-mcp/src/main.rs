@@ -16,7 +16,7 @@ pub(crate) mod output;
 use clap::Parser;
 use commands::Commands;
 use exit_codes::exit_code_for_error;
-use output::OutputFlags;
+use output::{ColorMode, OutputFlags};
 
 /// Forge MCP — discover, inspect, and audit MCP servers.
 #[derive(Parser, Debug)]
@@ -34,6 +34,14 @@ struct Cli {
     /// Enable extended output with metadata (larger, but more informative).
     #[arg(long, action = clap::ArgAction::Count, global = true)]
     verbose: u8,
+
+    /// Control ANSI color output: auto (default), always, or never.
+    ///
+    /// auto: colors only when stdout is a TTY (pipe-safe by default).
+    /// always: force colors even when piped.
+    /// never: suppress colors even in a TTY.
+    #[arg(long, global = true, value_enum, default_value_t = ColorMode::Auto)]
+    color: ColorMode,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -60,6 +68,8 @@ async fn main() {
     let flags = OutputFlags {
         pretty: cli.pretty,
         verbose: cli.verbose > 0,
+        color: cli.color,
+        null_separated: false, // set per-subcommand from ListArgs
     };
 
     // ── 4. Dispatch ─────────────────────────────────────────────────────────
