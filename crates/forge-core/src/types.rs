@@ -104,3 +104,49 @@ pub enum Transport {
     /// HTTP / SSE transport.
     Http,
 }
+
+// ── Aggregation types ─────────────────────────────────────────────────────────
+
+/// A single source entry within a conflict record.
+///
+/// Captures the editor, file path, and the full `ServerEntry` from that source.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConflictSource {
+    /// Which editor's config file produced this entry.
+    pub editor: EditorKind,
+    /// Path of the config file.
+    pub path: PathBuf,
+    /// The server entry as parsed from this source.
+    pub entry: ServerEntry,
+}
+
+/// Records that two or more config sources define the same server name with
+/// different parameters.
+///
+/// The winning entry is recorded in [`ServerRegistry`]; the loser(s) are
+/// preserved here for user-driven resolution.
+///
+/// Error code **E-CFG-006** is emitted for every `ConflictRecord`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConflictRecord {
+    /// Server name that appeared in multiple sources with conflicting definitions.
+    pub server_name: String,
+    /// All sources that define this server (≥ 2 entries).
+    pub sources: Vec<ConflictSource>,
+}
+
+/// Unified registry of all discovered MCP servers across all editors.
+///
+/// Produced by `forge_discovery::aggregator::aggregate_configs`.
+///
+/// - `servers` maps server name → winning `ServerEntry`.
+/// - `conflicts` lists all detected conflicts (servers defined differently in
+///   multiple config files).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ServerRegistry {
+    /// Winning server entry per unique server name.
+    /// Ordered by insertion (first-discovered wins on conflict).
+    pub servers: std::collections::HashMap<String, ServerEntry>,
+    /// One `ConflictRecord` per server name that had conflicting definitions.
+    pub conflicts: Vec<ConflictRecord>,
+}

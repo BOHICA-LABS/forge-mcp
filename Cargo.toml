@@ -47,6 +47,9 @@ crossterm = "0.29"
 # CLI (forge-mcp binary only)
 clap = { version = "4", features = ["derive"] }
 
+# Order-preserving map (used by forge-discovery aggregator)
+indexmap = "2"
+
 # Internal crates
 forge-config = { path = "crates/forge-config" }
 forge-core = { path = "crates/forge-core" }
