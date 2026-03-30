@@ -587,13 +587,12 @@ impl<H: ClientHandler> McpConnection<H> {
     /// Install a capture channel on this connection.
     ///
     /// After calling this, every JSON-RPC message flowing through the connection
-    /// (both directions) will be broadcast on `tx`.  This is a stub — no
-    /// intercept wiring is implemented yet.
+    /// (both directions) will be broadcast on `tx`.
     pub fn install_capture_hook(
         &mut self,
-        _tx: tokio::sync::broadcast::Sender<MessageCaptured>,
+        tx: tokio::sync::broadcast::Sender<MessageCaptured>,
     ) {
-        todo!()
+        self.capture_tx = Some(tx);
     }
 
     // ── Lifecycle ────────────────────────────────────────────────────────────

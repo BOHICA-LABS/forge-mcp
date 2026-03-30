@@ -194,9 +194,7 @@ async fn test_BC_4_09_001_multiple_consumers() {
     // We use the `subscribe()` stubs here; actual wiring is the implementer's job.
     // The test structure encodes the contract: 3 subscribers, 1 message, 3 receipts.
     capture_message(
-        // IMPLEMENTATION NOTE: replace with ch.sender() once CaptureChannel is complete.
-        // For Red Gate purposes, ch.subscribe() will also todo!() — test fails.
-        &broadcast::channel::<MessageCaptured>(TEST_CAP).0,
+        ch.sender(),
         MessageDirection::ClientToServer,
         Some("resources/list".to_string()),
         payload.clone(),

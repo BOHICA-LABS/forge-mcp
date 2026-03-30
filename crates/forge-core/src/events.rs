@@ -189,13 +189,14 @@ pub struct MessageCaptured {
 ///
 /// Follows AD-004 event-driven architecture.
 pub struct CaptureChannel {
-    tx: tokio::sync::broadcast::Sender<MessageCaptured>,
+    sender: tokio::sync::broadcast::Sender<MessageCaptured>,
 }
 
 impl CaptureChannel {
     /// Create a new `CaptureChannel` with the given broadcast buffer capacity.
-    pub fn new(_capacity: usize) -> Self {
-        todo!()
+    pub fn new(capacity: usize) -> Self {
+        let (sender, _) = tokio::sync::broadcast::channel(capacity);
+        Self { sender }
     }
 
     /// Subscribe to future [`MessageCaptured`] events.
@@ -204,13 +205,23 @@ impl CaptureChannel {
     /// messages broadcast after this call.  Events sent before subscription
     /// are not replayed.
     pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<MessageCaptured> {
-        todo!()
+        self.sender.subscribe()
+    }
+
+    /// Returns a reference to the underlying broadcast sender.
+    ///
+    /// Use this to pass to [`capture_message`] when you want events to reach
+    /// all subscribers of this channel.
+    pub fn sender(&self) -> &tokio::sync::broadcast::Sender<MessageCaptured> {
+        &self.sender
     }
 }
 
 /// Capture a single JSON-RPC message and broadcast it on the given channel.
 ///
-/// This is a stub — no implementation logic yet.
+/// Constructs a [`MessageCaptured`] event with a fresh UUID and the current
+/// instant, then sends it on `tx`.  If there are no active receivers, the
+/// send is silently ignored (EC-001).
 ///
 /// # Arguments
 /// * `tx`        – The broadcast sender to emit the event on.
@@ -218,10 +229,18 @@ impl CaptureChannel {
 /// * `method`    – The JSON-RPC method name, if applicable.
 /// * `payload`   – The raw JSON payload.
 pub fn capture_message(
-    _tx: &tokio::sync::broadcast::Sender<MessageCaptured>,
-    _direction: MessageDirection,
-    _method: Option<String>,
-    _payload: serde_json::Value,
+    tx: &tokio::sync::broadcast::Sender<MessageCaptured>,
+    direction: MessageDirection,
+    method: Option<String>,
+    payload: serde_json::Value,
 ) {
-    todo!()
+    let event = MessageCaptured {
+        id: uuid::Uuid::new_v4(),
+        direction,
+        method,
+        payload,
+        timestamp: std::time::Instant::now(),
+    };
+    // Silently ignore send errors — the only failure mode is zero receivers (EC-001).
+    let _ = tx.send(event);
 }
