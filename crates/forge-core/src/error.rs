@@ -47,6 +47,21 @@ pub enum CoreError {
     #[error("E-CON-009: authentication failed — HTTP 401 for {url}")]
     AuthenticationFailed { url: String },
 
+    /// E-CON-006: Protocol version mismatch — server reports a different version than proposed.
+    ///
+    /// This is an informational warning, not a hard error; the connection continues
+    /// using the negotiated (server-reported) version with a reduced feature set
+    /// if the server version is older than the client's proposed version.
+    #[error(
+        "E-CON-006: protocol version mismatch — proposed {proposed}, server reports {negotiated}; continuing with {negotiated} semantics"
+    )]
+    ProtocolVersionMismatch {
+        /// The version the client proposed in the `initialize` request.
+        proposed: String,
+        /// The version the server reported in its `InitializeResult`.
+        negotiated: String,
+    },
+
     /// E-CON-010: Insecure HTTP scheme detected.
     ///
     /// Emitted as a warning to stderr; connection still proceeds.

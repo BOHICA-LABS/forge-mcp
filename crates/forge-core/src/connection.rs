@@ -28,7 +28,14 @@ use rmcp::{
 };
 
 use crate::error::{CoreError, Result};
-use crate::types::NegotiatedCapabilities;
+use crate::types::{FeatureSet, NegotiatedCapabilities, features_for_version};
+
+// ── Constants ────────────────────────────────────────────────────────────────
+
+/// The MCP spec version that Forge MCP proposes in every `initialize` request.
+///
+/// Aligned with `rmcp 1.3`'s `ProtocolVersion::LATEST` (`"2025-06-18"`).
+pub const MCP_LATEST_VERSION: &str = "2025-06-18";
 
 // ── Connection state (pure) ──────────────────────────────────────────────────
 
@@ -135,6 +142,18 @@ pub enum TransportKind {
 /// negotiated capabilities are stored here and exposed through the
 /// `supports_*` accessor methods. These checks are **pure** — they read the
 /// stored data with no I/O.
+///
+/// ## Version-based degradation (STORY-015)
+///
+/// In addition to the server-advertised capability flags, `McpConnection` also
+/// applies a **version-based feature mask** derived from the server's reported
+/// `protocol_version`.  The `supports_*` methods return `true` only when
+/// **both** the server capability flag is set **and** the negotiated spec
+/// version allows the feature.
+///
+/// If the negotiated version differs from the client's proposed version,
+/// `E-CON-006` is recorded in `version_warning` at construction time.
+/// Callers may inspect `version_warning()` to surface this to users.
 pub struct McpConnection<H: ClientHandler = ()> {
     service: RunningService<RoleClient, H>,
     state: ConnectionState,
@@ -148,6 +167,15 @@ pub struct McpConnection<H: ClientHandler = ()> {
     /// The `supports_*` methods consult this field; capability guards return
     /// `Err(E-PRO-003)` when the required capability is absent.
     capabilities: NegotiatedCapabilities,
+    /// Version-based feature mask derived from `capabilities.protocol_version`.
+    ///
+    /// Computed once at construction via `features_for_version()`.  Pure field —
+    /// no I/O involved.
+    version_features: FeatureSet,
+    /// If the server's negotiated version differed from the client's proposed
+    /// version, this holds the `E-CON-006` warning error (informational only —
+    /// the connection is live and using the server-reported version).
+    version_warning: Option<CoreError>,
 }
 
 impl<H: ClientHandler> fmt::Debug for McpConnection<H> {
@@ -163,18 +191,75 @@ impl<H: ClientHandler> fmt::Debug for McpConnection<H> {
 
 impl<H: ClientHandler> McpConnection<H> {
     /// Create a new `McpConnection` from a running service and negotiated capabilities.
+    ///
+    /// The `proposed_version` parameter is the spec version string that the client
+    /// sent in its `initialize` request.  If it differs from
+    /// `capabilities.protocol_version` (what the server reported back), an
+    /// `E-CON-006` warning is stored in `version_warning`.
     pub(crate) fn new(
         service: RunningService<RoleClient, H>,
         label: impl Into<String>,
         transport_kind: TransportKind,
         capabilities: NegotiatedCapabilities,
     ) -> Self {
+        // Derive the version-based feature mask immediately (pure computation).
+        let version_features = features_for_version(&capabilities.protocol_version);
+
+        // Record E-CON-006 if the server reported a different version than what
+        // we proposed.  The `proposed_version` is not stored on
+        // `NegotiatedCapabilities` — transport.rs sets `protocol_version` to the
+        // *server-reported* value.  We detect mismatch by comparing against the
+        // current MCP_LATEST_VERSION constant.
+        let version_warning = if capabilities.protocol_version != MCP_LATEST_VERSION {
+            Some(CoreError::ProtocolVersionMismatch {
+                proposed: MCP_LATEST_VERSION.to_string(),
+                negotiated: capabilities.protocol_version.clone(),
+            })
+        } else {
+            None
+        };
+
         Self {
             service,
             state: ConnectionState::Connected,
             label: label.into(),
             transport_kind,
             capabilities,
+            version_features,
+            version_warning,
+        }
+    }
+
+    /// Create a `McpConnection` with an explicit proposed version for mismatch
+    /// detection.  This variant is used in tests and by transport code that
+    /// knows the exact version string it sent.
+    #[allow(dead_code)]
+    pub(crate) fn new_with_proposed_version(
+        service: RunningService<RoleClient, H>,
+        label: impl Into<String>,
+        transport_kind: TransportKind,
+        capabilities: NegotiatedCapabilities,
+        proposed_version: &str,
+    ) -> Self {
+        let version_features = features_for_version(&capabilities.protocol_version);
+
+        let version_warning = if capabilities.protocol_version != proposed_version {
+            Some(CoreError::ProtocolVersionMismatch {
+                proposed: proposed_version.to_string(),
+                negotiated: capabilities.protocol_version.clone(),
+            })
+        } else {
+            None
+        };
+
+        Self {
+            service,
+            state: ConnectionState::Connected,
+            label: label.into(),
+            transport_kind,
+            capabilities,
+            version_features,
+            version_warning,
         }
     }
 
@@ -238,26 +323,50 @@ impl<H: ClientHandler> McpConnection<H> {
     }
 
     /// Returns the protocol version string agreed during `initialize`
-    /// (e.g. `"2025-06-18"`).
+    /// (e.g. `"2025-11-25"`).
     pub fn protocol_version(&self) -> &str {
         &self.capabilities.protocol_version
     }
 
-    /// Returns `true` if the server advertised the `tools` capability.
+    /// Returns the version-based feature mask for this connection.
+    ///
+    /// Pure accessor — computed at construction from `protocol_version`.
+    pub fn version_features(&self) -> &FeatureSet {
+        &self.version_features
+    }
+
+    /// Returns the `E-CON-006` version mismatch warning if one was recorded,
+    /// or `None` if the server's version matched the proposed version.
+    ///
+    /// This is purely informational — the connection is live regardless.
+    pub fn version_warning(&self) -> Option<&CoreError> {
+        self.version_warning.as_ref()
+    }
+
+    /// Returns `true` if there was a protocol version mismatch between what
+    /// the client proposed and what the server reported.
+    pub fn has_version_mismatch(&self) -> bool {
+        self.version_warning.is_some()
+    }
+
+    /// Returns `true` if the server advertised the `tools` capability
+    /// **and** the negotiated spec version supports tools.
     ///
     /// Pure check — no I/O.
     pub fn supports_tools(&self) -> bool {
-        self.capabilities.server.tools.is_some()
+        self.capabilities.server.tools.is_some() && self.version_features.tools
     }
 
-    /// Returns `true` if the server advertised the `resources` capability.
+    /// Returns `true` if the server advertised the `resources` capability
+    /// **and** the negotiated spec version supports resources.
     pub fn supports_resources(&self) -> bool {
-        self.capabilities.server.resources.is_some()
+        self.capabilities.server.resources.is_some() && self.version_features.resources
     }
 
-    /// Returns `true` if the server advertised the `prompts` capability.
+    /// Returns `true` if the server advertised the `prompts` capability
+    /// **and** the negotiated spec version supports prompts.
     pub fn supports_prompts(&self) -> bool {
-        self.capabilities.server.prompts.is_some()
+        self.capabilities.server.prompts.is_some() && self.version_features.prompts
     }
 
     /// Returns `true` if the server advertised the `sampling` client-side capability.
@@ -269,9 +378,26 @@ impl<H: ClientHandler> McpConnection<H> {
         self.capabilities.client.sampling.is_some()
     }
 
-    /// Returns `true` if the server advertised the `logging` capability.
+    /// Returns `true` if the server advertised the `logging` capability
+    /// **and** the negotiated spec version supports logging.
     pub fn supports_logging(&self) -> bool {
-        self.capabilities.server.logging.is_some()
+        self.capabilities.server.logging.is_some() && self.version_features.logging
+    }
+
+    /// Returns `true` if the negotiated spec version supports `elicitation/create`.
+    ///
+    /// Elicitation is only available in spec versions `2025-11-25` and later.
+    /// This is a **version-only** guard — MCP does not have a separate server
+    /// capability flag for elicitation.
+    pub fn supports_elicitation(&self) -> bool {
+        self.version_features.elicitation
+    }
+
+    /// Returns `true` if the negotiated spec version supports streamable-HTTP transport.
+    ///
+    /// Streamable HTTP is only available in spec versions `2025-11-25` and later.
+    pub fn supports_streamable_http(&self) -> bool {
+        self.version_features.streamable_http
     }
 
     // ── Queries ───────────────────────────────────────────────────────────────
@@ -280,7 +406,8 @@ impl<H: ClientHandler> McpConnection<H> {
     ///
     /// # Errors
     /// Returns `Err(E-PRO-003)` immediately (no network round-trip) if the
-    /// server did not advertise the `tools` capability during `initialize`.
+    /// server did not advertise the `tools` capability during `initialize`, or
+    /// if the negotiated spec version does not support tools.
     pub async fn list_tools(&self) -> Result<ListToolsResult> {
         if !self.supports_tools() {
             return Err(CoreError::CapabilityNotSupported {
@@ -298,7 +425,8 @@ impl<H: ClientHandler> McpConnection<H> {
     /// List the resources available on the connected server.
     ///
     /// # Errors
-    /// Returns `Err(E-PRO-003)` if the server did not advertise `resources`.
+    /// Returns `Err(E-PRO-003)` if the server did not advertise `resources`, or
+    /// if the negotiated spec version does not support resources.
     pub async fn list_resources(&self) -> Result<ListResourcesResult> {
         if !self.supports_resources() {
             return Err(CoreError::CapabilityNotSupported {
@@ -316,7 +444,8 @@ impl<H: ClientHandler> McpConnection<H> {
     /// List the prompts available on the connected server.
     ///
     /// # Errors
-    /// Returns `Err(E-PRO-003)` if the server did not advertise `prompts`.
+    /// Returns `Err(E-PRO-003)` if the server did not advertise `prompts`, or
+    /// if the negotiated spec version does not support prompts.
     pub async fn list_prompts(&self) -> Result<ListPromptsResult> {
         if !self.supports_prompts() {
             return Err(CoreError::CapabilityNotSupported {
@@ -329,6 +458,25 @@ impl<H: ClientHandler> McpConnection<H> {
             .list_prompts(None)
             .await
             .map_err(|e| CoreError::Protocol(e.to_string()))
+    }
+
+    /// Guard for `elicitation/create` — returns `Err(E-PRO-003)` if the
+    /// negotiated spec version is older than `2025-11-25`.
+    ///
+    /// Callers should call this before attempting any `elicitation/create`
+    /// RPC to receive an immediate, descriptive error instead of a protocol
+    /// failure from the server.
+    pub fn guard_elicitation(&self) -> Result<()> {
+        if !self.supports_elicitation() {
+            return Err(CoreError::CapabilityNotSupported {
+                method: "elicitation/create".to_string(),
+                capability: format!(
+                    "elicitation (requires spec ≥ 2025-06-18; negotiated {})",
+                    self.capabilities.protocol_version
+                ),
+            });
+        }
+        Ok(())
     }
 
     /// Call a tool on the connected server.

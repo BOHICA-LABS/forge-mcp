@@ -193,3 +193,211 @@ impl NegotiatedCapabilities {
         }
     }
 }
+
+// ── Spec version compatibility ─────────────────────────────────────────────────
+
+/// Known MCP specification versions in chronological order.
+///
+/// Aligned with the versions known to `rmcp 1.3`:
+/// `2024-11-05`, `2025-03-26`, `2025-06-18`.
+///
+/// Per AC-004 / BC-2.04.003: unknown or future versions are treated as the
+/// highest known spec (`2025-06-18`) semantics, with a warning logged.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[non_exhaustive]
+pub enum SpecVersion {
+    /// `2024-11-05` — logging added; no elicitation, no streamable HTTP.
+    V2024_11_05,
+    /// `2025-03-26` — streamable HTTP added; no elicitation.
+    V2025_03_26,
+    /// `2025-06-18` — full feature set including elicitation.
+    V2025_06_18,
+}
+
+impl SpecVersion {
+    /// Parse a version string into a known `SpecVersion`, returning `None`
+    /// for unrecognised strings.
+    pub fn parse(version: &str) -> Option<Self> {
+        match version {
+            "2024-11-05" => Some(Self::V2024_11_05),
+            "2025-03-26" => Some(Self::V2025_03_26),
+            "2025-06-18" => Some(Self::V2025_06_18),
+            _ => None,
+        }
+    }
+
+    /// Returns the canonical version string for this spec version.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::V2024_11_05 => "2024-11-05",
+            Self::V2025_03_26 => "2025-03-26",
+            Self::V2025_06_18 => "2025-06-18",
+        }
+    }
+}
+
+/// The set of optional MCP features controlled by version-based degradation.
+///
+/// These flags represent protocol methods / transport features that are only
+/// available in specific spec versions.  The capability guard in
+/// `McpConnection` ANDs these flags with the server's advertised capabilities.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FeatureSet {
+    /// `elicitation/create` — first available in `2025-11-25`.
+    pub elicitation: bool,
+    /// Streamable-HTTP transport — first available in `2025-11-25`.
+    pub streamable_http: bool,
+    /// Server-side logging — first available in `2024-11-05`.
+    pub logging: bool,
+    /// Basic tools / resources / prompts — available in all known versions.
+    pub tools: bool,
+    /// Resources capability — available in all known versions.
+    pub resources: bool,
+    /// Prompts capability — available in all known versions.
+    pub prompts: bool,
+}
+
+impl FeatureSet {
+    /// All features enabled (latest spec).
+    pub const ALL: Self = Self {
+        elicitation: true,
+        streamable_http: true,
+        logging: true,
+        tools: true,
+        resources: true,
+        prompts: true,
+    };
+
+    /// Conservative feature set used for unknown/future versions.
+    ///
+    /// Enables only universally-supported features; anything version-specific
+    /// is disabled until the version can be confirmed.
+    pub const CONSERVATIVE: Self = Self {
+        elicitation: false,
+        streamable_http: false,
+        logging: false,
+        tools: true,
+        resources: true,
+        prompts: true,
+    };
+}
+
+/// Returns the `FeatureSet` available for a given protocol version string.
+///
+/// # Version mapping
+/// | Version string | Feature set |
+/// |----------------|-------------|
+/// | `"2025-06-18"` | All features (elicitation, streamable HTTP, logging, tools, resources, prompts) |
+/// | `"2025-03-26"` | No elicitation; streamable HTTP, logging + basic features |
+/// | `"2024-11-05"` | No elicitation, no streamable HTTP; logging + basic features |
+/// | *(unknown)*    | Conservative set (basic tools/resources/prompts only), no crash |
+pub fn features_for_version(version: &str) -> FeatureSet {
+    match SpecVersion::parse(version) {
+        Some(SpecVersion::V2025_06_18) => FeatureSet::ALL,
+        Some(SpecVersion::V2025_03_26) => FeatureSet {
+            elicitation: false,
+            streamable_http: true,
+            logging: true,
+            tools: true,
+            resources: true,
+            prompts: true,
+        },
+        Some(SpecVersion::V2024_11_05) => FeatureSet {
+            elicitation: false,
+            streamable_http: false,
+            logging: true,
+            tools: true,
+            resources: true,
+            prompts: true,
+        },
+        // Unknown or future version → conservative defaults, no crash (AC-004).
+        // Per story AC-004 / EC-002: future unknown versions continue without crash.
+        None => FeatureSet::CONSERVATIVE,
+    }
+}
+
+#[cfg(test)]
+mod version_tests {
+    #![allow(non_snake_case)]
+    use super::*;
+
+    // ── SpecVersion::parse ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_spec_version_parse_known_versions() {
+        assert_eq!(SpecVersion::parse("2024-11-05"), Some(SpecVersion::V2024_11_05));
+        assert_eq!(SpecVersion::parse("2025-03-26"), Some(SpecVersion::V2025_03_26));
+        assert_eq!(SpecVersion::parse("2025-06-18"), Some(SpecVersion::V2025_06_18));
+    }
+
+    #[test]
+    fn test_spec_version_parse_unknown_returns_none() {
+        assert_eq!(SpecVersion::parse("2026-01-01"), None);
+        assert_eq!(SpecVersion::parse(""), None);
+        assert_eq!(SpecVersion::parse("garbage"), None);
+        assert_eq!(SpecVersion::parse("2025-11-25"), None); // not a real version
+        assert_eq!(SpecVersion::parse("2024-10-07"), None); // pre-stable
+    }
+
+    #[test]
+    fn test_spec_version_ordering() {
+        assert!(SpecVersion::V2024_11_05 < SpecVersion::V2025_03_26);
+        assert!(SpecVersion::V2025_03_26 < SpecVersion::V2025_06_18);
+    }
+
+    // ── features_for_version ─────────────────────────────────────────────────
+
+    /// AC-001 (version detection): latest version enables all features.
+    #[test]
+    fn test_BC_2_04_003_features_latest_version_all_enabled() {
+        let fs = features_for_version("2025-06-18");
+        assert!(fs.elicitation, "elicitation must be enabled for 2025-06-18");
+        assert!(fs.streamable_http, "streamable_http must be enabled for 2025-06-18");
+        assert!(fs.logging, "logging must be enabled for 2025-06-18");
+        assert!(fs.tools);
+        assert!(fs.resources);
+        assert!(fs.prompts);
+    }
+
+    /// AC-003 (method gating): older version disables elicitation.
+    #[test]
+    fn test_BC_2_04_003_features_2024_11_05_no_elicitation() {
+        let fs = features_for_version("2024-11-05");
+        assert!(!fs.elicitation, "elicitation must be disabled for 2024-11-05");
+        assert!(!fs.streamable_http, "streamable_http must be disabled for 2024-11-05");
+        assert!(fs.logging, "logging must be enabled for 2024-11-05");
+        assert!(fs.tools);
+        assert!(fs.resources);
+        assert!(fs.prompts);
+    }
+
+    /// 2025-03-26 has streamable HTTP but not elicitation.
+    #[test]
+    fn test_features_2025_03_26_has_streamable_no_elicitation() {
+        let fs = features_for_version("2025-03-26");
+        assert!(!fs.elicitation, "elicitation must be disabled for 2025-03-26");
+        assert!(fs.streamable_http, "streamable_http must be enabled for 2025-03-26");
+        assert!(fs.logging);
+        assert!(fs.tools);
+        assert!(fs.resources);
+        assert!(fs.prompts);
+    }
+
+    /// AC-004 (unknown version continues): unknown / future version → conservative, no crash.
+    #[test]
+    fn test_BC_2_04_003_features_unknown_version_conservative() {
+        // Unknown version must not crash and must return conservative set.
+        let fs = features_for_version("2026-01-01");
+        assert!(!fs.elicitation, "unknown version must disable elicitation");
+        assert!(fs.tools, "unknown version must still allow basic tools");
+        assert!(fs.resources);
+        assert!(fs.prompts);
+    }
+
+    #[test]
+    fn test_BC_2_04_003_features_empty_string_conservative() {
+        let fs = features_for_version("");
+        assert!(!fs.elicitation);
+        assert!(fs.tools);
+    }
+}

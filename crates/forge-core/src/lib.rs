@@ -23,6 +23,8 @@ pub use error::{CoreError, ForgeError, Result};
 pub use lifecycle::{ConnectionLifecycleConfig, ConnectionManager, PingFn, close_with_timeout};
 pub use transport::{connect_http, connect_stdio, connect_stdio_with_timeout, DEFAULT_CONNECT_TIMEOUT_SECS};
 pub use types::{
-    ConfigSource, ConflictRecord, ConflictSource, EditorKind, HttpConfig, NegotiatedCapabilities,
-    ServerEntry, ServerRegistry, StdioConfig, Transport, TransportConfig,
+    ConfigSource, ConflictRecord, ConflictSource, EditorKind, FeatureSet, HttpConfig,
+    NegotiatedCapabilities, ServerEntry, ServerRegistry, SpecVersion, StdioConfig, Transport,
+    TransportConfig, features_for_version,
 };
+pub use connection::MCP_LATEST_VERSION;
