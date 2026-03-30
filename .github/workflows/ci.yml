@@ -37,7 +37,7 @@ jobs:
             runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
           - os: macos-x64
-            runner: macos-13
+            runner: macos-15
             target: x86_64-apple-darwin
           - os: macos-arm64
             runner: macos-latest
@@ -97,7 +97,7 @@ jobs:
             target: aarch64-unknown-linux-gnu
             binary: forge-mcp
           - os: macos-x64
-            runner: macos-13
+            runner: macos-15
             target: x86_64-apple-darwin
             binary: forge-mcp
           - os: macos-arm64
