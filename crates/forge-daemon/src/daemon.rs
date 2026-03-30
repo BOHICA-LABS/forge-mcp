@@ -539,30 +539,50 @@ mod tests {
             "socket path must contain 'forge-mcp': {path_str}"
         );
 
-        // Must end with daemon.sock.
+        // Platform-specific suffix check.
+        #[cfg(unix)]
         assert!(
             path_str.ends_with("daemon.sock"),
-            "socket path must end with 'daemon.sock': {path_str}"
+            "Unix socket path must end with 'daemon.sock': {path_str}"
+        );
+        #[cfg(windows)]
+        assert!(
+            path_str.contains(r"\\.\pipe\"),
+            "Windows socket path must be a named pipe (contain r\"\\\\.\\pipe\\\")): {path_str}"
         );
     }
 
-    /// XDG_RUNTIME_DIR is respected when set.
+    /// XDG_RUNTIME_DIR is respected when set (Unix only; Windows uses named pipes).
     #[test]
     fn test_xdg_runtime_dir_is_used_when_set() {
         // This test modifies env — only safe in single-threaded context.
         // We check the logic by direct path construction rather than env mutation.
-        let xdg = std::env::var("XDG_RUNTIME_DIR").unwrap_or_default();
-        if !xdg.is_empty() {
+        #[cfg(unix)]
+        {
+            let xdg = std::env::var("XDG_RUNTIME_DIR").unwrap_or_default();
+            if !xdg.is_empty() {
+                let path = daemon_socket_path();
+                assert!(
+                    path.starts_with(&xdg),
+                    "socket path must be under XDG_RUNTIME_DIR when set"
+                );
+            }
+            // If XDG_RUNTIME_DIR is not set, the fallback /tmp path is used.
+            // Both branches produce a valid path ending in daemon.sock.
             let path = daemon_socket_path();
+            assert!(path.to_string_lossy().ends_with("daemon.sock"));
+        }
+        #[cfg(windows)]
+        {
+            // On Windows the daemon always uses a named pipe regardless of
+            // XDG_RUNTIME_DIR; verify the path is valid.
+            let path = daemon_socket_path();
+            let path_str = path.to_string_lossy();
             assert!(
-                path.starts_with(&xdg),
-                "socket path must be under XDG_RUNTIME_DIR when set"
+                path_str.contains(r"\\.\pipe\"),
+                "Windows socket path must be a named pipe: {path_str}"
             );
         }
-        // If XDG_RUNTIME_DIR is not set, the fallback /tmp path is used.
-        // Both branches produce a valid path ending in daemon.sock.
-        let path = daemon_socket_path();
-        assert!(path.to_string_lossy().ends_with("daemon.sock"));
     }
 
     // ── STORY-012: Conflict detection integration tests ───────────────────────
