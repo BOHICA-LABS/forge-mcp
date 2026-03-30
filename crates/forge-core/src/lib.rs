@@ -18,8 +18,8 @@ pub mod types;
 
 // Convenience re-exports for callers.
 pub use connection::{ConnectionState, McpConnection, TransportKind};
-pub use error::{ForgeError, Result};
-pub use transport::{connect_stdio, connect_stdio_with_timeout, DEFAULT_CONNECT_TIMEOUT_SECS};
+pub use error::{CoreError, ForgeError, Result};
+pub use transport::{connect_http, connect_stdio, connect_stdio_with_timeout, DEFAULT_CONNECT_TIMEOUT_SECS};
 pub use types::{
     ConfigSource, EditorKind, HttpConfig, ServerEntry, StdioConfig, Transport,
     TransportConfig,

@@ -1,10 +1,5 @@
-mod config;
-mod server;
-#[cfg(test)]
-mod tests;
-
-use config::HttpMockConfig;
-use server::MockHttpServer;
+use forge_test_http_server::config::HttpMockConfig;
+use forge_test_http_server::server::MockHttpServer;
 use tokio_util::sync::CancellationToken;
 
 #[tokio::main]

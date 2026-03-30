@@ -6,6 +6,10 @@ license.workspace = true
 repository.workspace = true
 description = "Mock MCP HTTP server fixture for integration tests (STORY-003)"
 
+[lib]
+name = "forge_test_http_server"
+path = "src/lib.rs"
+
 [[bin]]
 name = "forge-test-http-server"
 path = "src/main.rs"
