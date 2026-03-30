@@ -13,6 +13,7 @@
 //!   mode per DEC-017 / EC-002
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use rmcp::{
     ClientHandler,
@@ -24,6 +25,8 @@ use rmcp::{
     },
     service::{RequestContext, RoleClient},
 };
+
+use crate::llm_proxy::LlmProxy;
 
 // ── ClientCapabilityConfig ────────────────────────────────────────────────────
 
@@ -116,25 +119,41 @@ impl ClientCapabilityConfig {
 
 /// Forge MCP's implementation of `rmcp::ClientHandler`.
 ///
-/// Wraps a `ClientCapabilityConfig` to:
+/// Wraps a `ClientCapabilityConfig` and an optional `LlmProxy` to:
 /// - Advertise the correct capabilities in `initialize`
 /// - Respond to `roots/list` with configured root paths
-/// - Decline sampling / elicitation requests with stub errors (to be replaced
-///   with real implementations in later stories)
+/// - Forward `sampling/createMessage` to a configured LLM proxy, or return
+///   `E-PRO-007` if no LLM endpoint is configured
+/// - Decline elicitation in non-interactive mode (DEC-017)
 ///
 /// ## Thread safety
 ///
-/// `ForgeClientHandler` is `Send + Sync` — the inner config is immutable after
-/// construction.
+/// `ForgeClientHandler` is `Send + Sync` — the inner config and proxy are
+/// immutable after construction and `LlmProxy` wraps a `reqwest::Client`
+/// which is `Send + Sync`.
 #[derive(Debug, Clone)]
 pub struct ForgeClientHandler {
     config: ClientCapabilityConfig,
+    /// Optional LLM proxy. `None` when `FORGE_LLM_URL` is not configured.
+    llm_proxy: Option<Arc<LlmProxy>>,
 }
 
 impl ForgeClientHandler {
     /// Create a new `ForgeClientHandler` from a `ClientCapabilityConfig`.
+    ///
+    /// No LLM proxy is configured — `create_message` will return `E-PRO-007`.
     pub fn new(config: ClientCapabilityConfig) -> Self {
-        Self { config }
+        Self { config, llm_proxy: None }
+    }
+
+    /// Create a handler with an explicit `LlmProxy`.
+    ///
+    /// Use this when you want to provide a pre-configured proxy (e.g. in tests).
+    pub fn with_llm_proxy(config: ClientCapabilityConfig, proxy: LlmProxy) -> Self {
+        Self {
+            config,
+            llm_proxy: Some(Arc::new(proxy)),
+        }
     }
 
     /// Build the `ClientInfo` to use during the MCP initialize handshake.
@@ -169,21 +188,29 @@ impl ClientHandler for ForgeClientHandler {
         std::future::ready(Ok(ListRootsResult::new(roots)))
     }
 
-    /// `sampling/createMessage` — stub returning not-implemented.
+    /// `sampling/createMessage` — forward to LLM proxy or return `E-PRO-007`.
     ///
-    /// Returns `E-PRO-007` until a real LLM proxy is wired in (future story).
-    /// Per AC-004, if the client did not advertise sampling then servers should
-    /// not call this at all.
+    /// If an `LlmProxy` is configured (via `FORGE_LLM_URL` or `with_llm_proxy`),
+    /// the request is forwarded to the OpenAI-compatible endpoint.
+    /// If no proxy is configured, returns `E-PRO-007` (method not found).
+    ///
+    /// Pass-through fields: `modelPreferences`, `includeContext`, `stopSequences`.
     fn create_message(
         &self,
-        _params: CreateMessageRequestParams,
+        params: CreateMessageRequestParams,
         _context: RequestContext<RoleClient>,
     ) -> impl std::future::Future<Output = Result<CreateMessageResult, McpError>> + Send + '_ {
-        std::future::ready(Err(McpError::new(
-            ErrorCode::METHOD_NOT_FOUND,
-            "E-PRO-007: sampling/createMessage not implemented — no LLM proxy configured",
-            None,
-        )))
+        let proxy = self.llm_proxy.clone();
+        async move {
+            match proxy {
+                Some(p) => p.send_sampling_request(&params).await,
+                None => Err(McpError::new(
+                    ErrorCode::METHOD_NOT_FOUND,
+                    "E-PRO-007: sampling/createMessage not implemented — no LLM proxy configured",
+                    None,
+                )),
+            }
+        }
     }
 
     /// `elicitation/create` — stub returning decline in non-interactive mode.
