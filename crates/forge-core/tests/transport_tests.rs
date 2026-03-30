@@ -69,10 +69,9 @@ async fn test_BC_1_02_001_stdio_connect_success() {
         "expected server_name from initialize result");
     assert_eq!(conn.server_version(), "0.1.0");
 
-    // Capabilities must be available.
-    let info = conn.server_info().expect("server_info must be present after init");
-    assert!(info.capabilities.tools.is_some(), "server should advertise tools capability");
-    assert!(info.capabilities.resources.is_some(), "server should advertise resources capability");
+    // Capabilities must be available — use the negotiated capability accessors.
+    assert!(conn.supports_tools(), "server should advertise tools capability");
+    assert!(conn.supports_resources(), "server should advertise resources capability");
 
     // Peer must be available.
     assert!(conn.peer().is_some(), "peer handle must be available");

@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use rmcp::model::{ClientCapabilities, ServerCapabilities};
 use serde::{Deserialize, Serialize};
 
 // Re-export EditorKind from forge-discovery's types for use in ServerEntry.
@@ -149,4 +150,46 @@ pub struct ServerRegistry {
     pub servers: std::collections::HashMap<String, ServerEntry>,
     /// One `ConflictRecord` per server name that had conflicting definitions.
     pub conflicts: Vec<ConflictRecord>,
+}
+
+// ── Capability negotiation types ──────────────────────────────────────────────
+
+/// The result of a completed MCP capability negotiation handshake.
+///
+/// Produced by the `initialize` / `initialized` exchange. rmcp performs the
+/// actual JSON-RPC round-trip; this struct captures the negotiated results in
+/// a Forge-specific, ergonomic wrapper.
+///
+/// ## Protocol flow
+/// ```text
+/// Client → Server  initialize(clientInfo, clientCapabilities)
+/// Server → Client  InitializeResult(serverCapabilities, protocolVersion)
+/// Client → Server  notifications/initialized
+/// ```
+///
+/// After that exchange this struct holds both sides and the agreed protocol
+/// version so capability-guard methods can answer without further I/O.
+#[derive(Debug, Clone)]
+pub struct NegotiatedCapabilities {
+    /// What the server advertised in its `InitializeResult`.
+    pub server: ServerCapabilities,
+    /// What Forge MCP advertised in the `initialize` request.
+    pub client: ClientCapabilities,
+    /// The protocol version string the server reported (e.g. `"2025-06-18"`).
+    pub protocol_version: String,
+}
+
+impl NegotiatedCapabilities {
+    /// Create from the rmcp-parsed handshake results.
+    pub fn new(
+        server: ServerCapabilities,
+        client: ClientCapabilities,
+        protocol_version: impl Into<String>,
+    ) -> Self {
+        Self {
+            server,
+            client,
+            protocol_version: protocol_version.into(),
+        }
+    }
 }

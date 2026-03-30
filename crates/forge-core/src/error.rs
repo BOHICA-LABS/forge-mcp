@@ -69,6 +69,19 @@ pub enum CoreError {
     #[error("E-PRO-001: MCP protocol error: {0}")]
     Protocol(String),
 
+    /// E-PRO-003: Method not available — server lacks the required capability.
+    ///
+    /// Emitted by capability guards in `McpConnection` when the caller attempts
+    /// to invoke a method that requires a server capability the server did not
+    /// advertise during the initialize handshake.
+    #[error("E-PRO-003: method {method} not available — server lacks {capability} capability")]
+    CapabilityNotSupported {
+        /// The JSON-RPC method that was attempted.
+        method: String,
+        /// The capability name that is missing (e.g., `"tools"`, `"resources"`).
+        capability: String,
+    },
+
     // ── Generic / other ───────────────────────────────────────────────────
 
     /// An I/O error that doesn't map to a more specific code.

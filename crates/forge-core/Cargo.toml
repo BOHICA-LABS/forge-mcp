@@ -24,7 +24,12 @@ forge-test-http-server = { path = "../../tests/forge-test-http-server" }
 tokio = { workspace = true }
 rmcp = { workspace = true }
 tokio-util = { version = "0.7" }
+tempfile = "3"
 
 [[test]]
 name = "transport_tests"
 path = "tests/transport_tests.rs"
+
+[[test]]
+name = "capability_tests"
+path = "tests/capability_tests.rs"
