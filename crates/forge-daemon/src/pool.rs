@@ -19,6 +19,14 @@
 //! Multiple callers requesting the same server name receive a `SessionHandle`
 //! that holds an `Arc` reference to the shared `PoolEntry`. No two callers
 //! ever force a second physical connection to the same server while one is live.
+//!
+//! ### Named Sessions (STORY-011 / BC-1.03.002)
+//!
+//! A secondary index `HashMap<String, String>` maps user-provided session names
+//! to server-name keys in the primary pool. Named sessions survive across CLI
+//! invocations as long as the daemon process remains alive. The `NamedSession`
+//! struct captures the name, server, creation time, and last activity time for
+//! the `daemon sessions` list command (AC-004).
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -29,6 +37,42 @@ use tracing::{debug, info, warn};
 
 use crate::error::DaemonError;
 use crate::session::SessionId;
+
+// ── Named session ─────────────────────────────────────────────────────────────
+
+/// Metadata for a user-named session (STORY-011, BC-1.03.002).
+///
+/// A named session is an overlay on the pool: it gives a human-readable alias
+/// to an existing pool entry (identified by `server_name`). Multiple names can
+/// point to the same server, though they will all share the single pooled
+/// connection.
+#[derive(Debug, Clone)]
+pub struct NamedSession {
+    /// The user-provided name (e.g. `"my-debug"`).
+    pub name: String,
+    /// The MCP server this session targets.
+    pub server_name: String,
+    /// When the named session was registered.
+    pub created_at: Instant,
+    /// When the named session was last accessed.
+    pub last_activity: Instant,
+}
+
+impl NamedSession {
+    fn new(name: impl Into<String>, server_name: impl Into<String>) -> Self {
+        let now = Instant::now();
+        Self {
+            name: name.into(),
+            server_name: server_name.into(),
+            created_at: now,
+            last_activity: now,
+        }
+    }
+
+    fn touch(&mut self) {
+        self.last_activity = Instant::now();
+    }
+}
 
 // ── Pool configuration ────────────────────────────────────────────────────────
 
@@ -118,9 +162,14 @@ pub struct SessionHandle {
 ///
 /// Multiple tokio tasks may call `get_or_create` concurrently; the mutex
 /// ensures only one physical connection is created per server (AC-004).
+///
+/// The pool also maintains a secondary index of named sessions (STORY-011).
+/// Named sessions map a user-provided name → server_name key in `entries`.
 pub struct SessionPool {
     config: PoolConfig,
     entries: Arc<Mutex<HashMap<String, PoolEntry>>>,
+    /// Secondary index: session name → server name.
+    named: Arc<Mutex<HashMap<String, NamedSession>>>,
     factory: ConnectionFactory,
 }
 
@@ -130,6 +179,7 @@ impl SessionPool {
         Self {
             config,
             entries: Arc::new(Mutex::new(HashMap::new())),
+            named: Arc::new(Mutex::new(HashMap::new())),
             factory,
         }
     }
@@ -230,6 +280,80 @@ impl SessionPool {
             session_id: e.session_id.clone(),
             server_name: e.server_name.clone(),
         })
+    }
+
+    // ── Named session API (STORY-011 / BC-1.03.002) ───────────────────────────
+
+    /// Create a named session backed by the given server.
+    ///
+    /// - Calls `get_or_create` to ensure the underlying pool entry exists.
+    /// - If `name` already exists, **overwrites** with a warning (EC-002).
+    /// - Returns the `SessionHandle` for the backing pool entry.
+    pub async fn get_or_create_named(
+        &self,
+        name: &str,
+        server: &str,
+    ) -> Result<SessionHandle, DaemonError> {
+        // Ensure the pool entry exists first.
+        let handle = self.get_or_create(server).await?;
+
+        let mut named = self.named.lock().await;
+        if named.contains_key(name) {
+            warn!("named session {name:?} already exists — overwriting");
+        }
+        named.insert(name.to_string(), NamedSession::new(name, server));
+
+        Ok(handle)
+    }
+
+    /// Retrieve a pooled session handle by name.
+    ///
+    /// Touches the `NamedSession` last-activity timestamp and the underlying
+    /// pool entry. Returns `Err(SessionNotFound)` if the name is unknown
+    /// (AC-003 / E-CON-003).
+    pub async fn get_by_name(&self, name: &str) -> Result<SessionHandle, DaemonError> {
+        // Look up the name in the secondary index.
+        let server_name = {
+            let mut named = self.named.lock().await;
+            match named.get_mut(name) {
+                Some(ns) => {
+                    ns.touch();
+                    ns.server_name.clone()
+                }
+                None => {
+                    return Err(DaemonError::SessionNotFound {
+                        name: name.to_string(),
+                    });
+                }
+            }
+        };
+
+        // Retrieve (or recreate if dead) the underlying pool entry.
+        self.get_or_create(&server_name).await
+    }
+
+    /// Remove a named session.
+    ///
+    /// The backing pool entry is **not** evicted — other names or anonymous
+    /// pool lookups may still use it. Returns `true` if the name existed.
+    pub async fn remove_named(&self, name: &str) -> bool {
+        let mut named = self.named.lock().await;
+        if named.remove(name).is_some() {
+            info!("removed named session {name:?}");
+            true
+        } else {
+            false
+        }
+    }
+
+    /// List all active named sessions.
+    ///
+    /// Returns cloned `NamedSession` metadata sorted by creation time (AC-004).
+    pub async fn list_named(&self) -> Vec<NamedSession> {
+        let named = self.named.lock().await;
+        let mut sessions: Vec<NamedSession> = named.values().cloned().collect();
+        sessions.sort_by_key(|s| s.created_at);
+        sessions
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
@@ -474,5 +598,186 @@ mod tests {
         assert_eq!(pool.len().await, 1);
         pool.evict("srv").await;
         assert_eq!(pool.len().await, 0);
+    }
+
+    // ── Named session tests (STORY-011 / BC-1.03.002) ────────────────────────
+
+    /// AC-001: Create a named session → retrieve it by name → same session ID.
+    #[tokio::test]
+    async fn test_BC_1_03_002_named_session_creation() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+
+        // Create a named session.
+        let handle = pool
+            .get_or_create_named("my-debug", "myserver")
+            .await
+            .expect("named session creation must succeed");
+
+        assert_eq!(handle.server_name, "myserver");
+
+        // Retrieve by name — must return same session ID.
+        let handle2 = pool
+            .get_by_name("my-debug")
+            .await
+            .expect("named session retrieval must succeed");
+
+        assert_eq!(
+            handle.session_id, handle2.session_id,
+            "get_by_name must return the same pooled session"
+        );
+        // Factory called exactly once.
+        assert_eq!(counter.load(Ordering::Relaxed), 1);
+    }
+
+    /// AC-002: Unnamed sessions still work with auto-generated IDs.
+    #[tokio::test]
+    async fn test_BC_1_03_002_unnamed_sessions_use_auto_id() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+
+        // Unnamed path — get_or_create by server name.
+        let h1 = pool.get_or_create("anon-server").await.expect("first");
+        let h2 = pool.get_or_create("anon-server").await.expect("second");
+
+        assert_eq!(
+            h1.session_id, h2.session_id,
+            "unnamed sessions must reuse the same pool entry"
+        );
+        assert_eq!(counter.load(Ordering::Relaxed), 1);
+
+        // Named index must be empty.
+        assert_eq!(pool.list_named().await.len(), 0);
+    }
+
+    /// AC-002: Two different names produce two independent session entries.
+    #[tokio::test]
+    async fn test_BC_1_03_002_named_session_resume() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+
+        let h_a1 = pool
+            .get_or_create_named("session-a", "server-a")
+            .await
+            .expect("create session-a");
+        let h_b1 = pool
+            .get_or_create_named("session-b", "server-b")
+            .await
+            .expect("create session-b");
+
+        // They point to different servers → different session IDs.
+        assert_ne!(
+            h_a1.session_id, h_b1.session_id,
+            "two different names on different servers must yield different sessions"
+        );
+
+        // Re-fetch by name — must get same IDs back.
+        let h_a2 = pool.get_by_name("session-a").await.expect("resume session-a");
+        let h_b2 = pool.get_by_name("session-b").await.expect("resume session-b");
+
+        assert_eq!(h_a1.session_id, h_a2.session_id, "session-a must be stable across get_by_name");
+        assert_eq!(h_b1.session_id, h_b2.session_id, "session-b must be stable across get_by_name");
+        // Factory called exactly twice (one per server).
+        assert_eq!(counter.load(Ordering::Relaxed), 2);
+    }
+
+    /// AC-003: Looking up a non-existent named session returns SessionNotFound.
+    #[tokio::test]
+    async fn test_BC_1_03_002_session_not_found() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+
+        let result = pool.get_by_name("does-not-exist").await;
+        assert!(
+            result.is_err(),
+            "looking up non-existent named session must return an error"
+        );
+
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("does-not-exist"),
+            "error message must include the session name: {err}"
+        );
+        // Matches SessionNotFound variant.
+        assert!(
+            matches!(err, DaemonError::SessionNotFound { ref name } if name == "does-not-exist"),
+            "must be SessionNotFound variant"
+        );
+    }
+
+    /// Close a named session → no longer retrievable.
+    #[tokio::test]
+    async fn test_close_named_session_not_retrievable() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+
+        pool.get_or_create_named("to-close", "some-server")
+            .await
+            .expect("create");
+
+        let removed = pool.remove_named("to-close").await;
+        assert!(removed, "remove_named must return true for existing session");
+
+        // Subsequent lookup must fail.
+        let result = pool.get_by_name("to-close").await;
+        assert!(
+            result.is_err(),
+            "closed named session must not be retrievable"
+        );
+        assert!(matches!(
+            result.unwrap_err(),
+            DaemonError::SessionNotFound { .. }
+        ));
+    }
+
+    /// AC-004: list_named returns all active named sessions.
+    #[tokio::test]
+    async fn test_BC_1_03_002_session_list_json() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+
+        // Start with empty list.
+        assert_eq!(pool.list_named().await.len(), 0);
+
+        pool.get_or_create_named("alpha", "srv-alpha").await.expect("alpha");
+        pool.get_or_create_named("beta", "srv-beta").await.expect("beta");
+        pool.get_or_create_named("gamma", "srv-gamma").await.expect("gamma");
+
+        let sessions = pool.list_named().await;
+        assert_eq!(sessions.len(), 3, "list must show all active named sessions");
+
+        let names: Vec<&str> = sessions.iter().map(|s| s.name.as_str()).collect();
+        assert!(names.contains(&"alpha"), "list must include alpha");
+        assert!(names.contains(&"beta"), "list must include beta");
+        assert!(names.contains(&"gamma"), "list must include gamma");
+
+        // Remove one — list shrinks.
+        pool.remove_named("beta").await;
+        let sessions = pool.list_named().await;
+        assert_eq!(sessions.len(), 2, "list must shrink after removal");
+        let names: Vec<&str> = sessions.iter().map(|s| s.name.as_str()).collect();
+        assert!(!names.contains(&"beta"), "removed session must not appear");
+    }
+
+    /// EC-002: Creating a named session with an existing name overwrites it (with warning).
+    #[tokio::test]
+    async fn test_named_session_overwrite_on_duplicate_name() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+
+        // Create "my-session" pointing at server-a.
+        pool.get_or_create_named("my-session", "server-a")
+            .await
+            .expect("first create");
+
+        // Overwrite with server-b.
+        pool.get_or_create_named("my-session", "server-b")
+            .await
+            .expect("second create overwrites");
+
+        // Now list should show only 1 session.
+        let sessions = pool.list_named().await;
+        assert_eq!(sessions.len(), 1, "overwrite must not duplicate the name");
+        assert_eq!(sessions[0].server_name, "server-b", "overwritten session must point to new server");
     }
 }
