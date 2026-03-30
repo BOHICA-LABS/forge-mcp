@@ -10,3 +10,10 @@
 //! - Provide connection lifecycle management (connect, disconnect, reconnect)
 //! - Expose structured error types for all MCP protocol failures
 //! - Establish the purity boundary: protocol I/O is impure; parsing/validation is pure
+
+pub mod types;
+
+pub use types::{
+    ConfigSource, EditorKind, HttpConfig, ServerEntry, StdioConfig, Transport,
+    TransportConfig,
+};
