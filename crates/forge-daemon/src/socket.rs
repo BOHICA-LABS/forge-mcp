@@ -22,6 +22,7 @@
 
 use std::path::{Path, PathBuf};
 
+#[cfg(unix)]
 use tracing::{info, warn};
 
 use crate::error::DaemonError;

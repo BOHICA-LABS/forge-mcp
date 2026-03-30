@@ -40,16 +40,20 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::Mutex;
-use tracing::{debug, error, info, warn};
+#[cfg(unix)]
+use tracing::error;
+use tracing::{debug, info, warn};
 
 use crate::error::{DaemonError, Result};
 use crate::pool::{ConnectionFactory, PoolConfig, SessionPool};
 use crate::session::SessionId;
+use crate::socket::daemon_socket_path;
+#[cfg(unix)]
 use crate::socket::{
-    SocketConflictResolution, daemon_socket_path, pid_lock_path, resolve_socket_conflict,
-    write_pid_lock,
+    SocketConflictResolution, pid_lock_path, resolve_socket_conflict, write_pid_lock,
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -124,7 +128,9 @@ pub struct SessionHandle {
 /// dispatching to the `SessionPool`.
 pub struct DaemonServer {
     pool: Arc<SessionPool>,
+    #[cfg(unix)]
     socket_path: PathBuf,
+    #[cfg(unix)]
     idle_eviction_interval: Duration,
 }
 
@@ -141,14 +147,16 @@ impl DaemonServer {
 
     /// Create with explicit socket path and config.
     pub fn with_config(
-        socket_path: PathBuf,
+        #[cfg_attr(not(unix), allow(unused_variables))] socket_path: PathBuf,
         pool_config: PoolConfig,
         factory: ConnectionFactory,
-        idle_eviction_interval: Duration,
+        #[cfg_attr(not(unix), allow(unused_variables))] idle_eviction_interval: Duration,
     ) -> Self {
         Self {
             pool: Arc::new(SessionPool::new(pool_config, factory)),
+            #[cfg(unix)]
             socket_path,
+            #[cfg(unix)]
             idle_eviction_interval,
         }
     }
@@ -276,6 +284,7 @@ async fn handle_unix_connection(
 }
 
 /// Dispatch a raw JSON-RPC line to the pool and return a serializable response.
+#[cfg(unix)]
 async fn dispatch_request(line: &str, pool: &SessionPool) -> serde_json::Value {
     let req: DaemonRequest = match serde_json::from_str(line) {
         Ok(r) => r,
@@ -330,14 +339,16 @@ async fn dispatch_request(line: &str, pool: &SessionPool) -> serde_json::Value {
 
 /// Client handle for communicating with a running daemon.
 pub struct DaemonClient {
+    #[cfg(unix)]
     socket_path: PathBuf,
     next_id: Arc<Mutex<u64>>,
 }
 
 impl DaemonClient {
     /// Create a client for the given socket path.
-    pub fn new(socket_path: PathBuf) -> Self {
+    pub fn new(#[cfg_attr(not(unix), allow(unused_variables))] socket_path: PathBuf) -> Self {
         Self {
+            #[cfg(unix)]
             socket_path,
             next_id: Arc::new(Mutex::new(1)),
         }
