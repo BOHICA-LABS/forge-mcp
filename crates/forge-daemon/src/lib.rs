@@ -23,5 +23,5 @@ pub use daemon::{
     DAEMON_START_TIMEOUT_SECS,
 };
 pub use error::{DaemonError, Result};
-pub use pool::{ConnectionFactory, PoolConfig, PoolableConnection, SessionPool};
+pub use pool::{ConnectionFactory, NamedSession, PoolConfig, PoolableConnection, SessionPool};
 pub use session::SessionId;

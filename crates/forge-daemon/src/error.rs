@@ -37,6 +37,10 @@ pub enum DaemonError {
     /// The daemon failed to start within the configured timeout.
     #[error("daemon start timeout after {seconds}s")]
     StartTimeout { seconds: u64 },
+
+    /// Named session was not found (E-CON-003).
+    #[error("session '{name}' not found")]
+    SessionNotFound { name: String },
 }
 
 /// Convenience `Result` alias.
