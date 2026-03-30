@@ -263,7 +263,7 @@ fn platform_uid() -> u32 {
     // SAFETY: getuid(2) is always safe and has no failure mode.
     #[cfg(target_os = "linux")]
     {
-        extern "C" {
+        unsafe extern "C" {
             fn getuid() -> u32;
         }
         // SAFETY: pure system call.

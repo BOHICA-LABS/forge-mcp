@@ -45,10 +45,12 @@ fn test_server_bin() -> String {
         .and_then(|p| p.parent()) // workspace root
         .expect("expected workspace root");
     let target_dir = workspace_root.join("target");
+    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
+
     // Check target-triple subdirectories first (CI with --target <triple>).
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
         for entry in entries.flatten() {
-            let candidate = entry.path().join("debug").join("forge-test-server");
+            let candidate = entry.path().join("debug").join(bin_name);
             if candidate.exists() {
                 return candidate.to_string_lossy().to_string();
             }
@@ -57,7 +59,7 @@ fn test_server_bin() -> String {
     // Fallback: plain target/debug (local builds without --target).
     target_dir
         .join("debug")
-        .join("forge-test-server")
+        .join(bin_name)
         .to_string_lossy()
         .to_string()
 }

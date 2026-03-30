@@ -25,16 +25,17 @@ fn test_server_bin() -> PathBuf {
     if let Ok(p) = env::var("CARGO_BIN_EXE_forge-test-server") {
         return PathBuf::from(p);
     }
+    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
     // Fallback: look in the same directory as the current test binary.
     let exe = env::current_exe().expect("current_exe");
     let dir = exe.parent().expect("exe parent dir");
     // In deps/ layout the binary is one level up.
-    let candidate = dir.join("forge-test-server");
+    let candidate = dir.join(bin_name);
     if candidate.exists() {
         return candidate;
     }
     dir.parent()
-        .map(|p| p.join("forge-test-server"))
+        .map(|p| p.join(bin_name))
         .filter(|p| p.exists())
         .unwrap_or(candidate)
 }
