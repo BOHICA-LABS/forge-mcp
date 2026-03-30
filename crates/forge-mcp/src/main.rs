@@ -5,8 +5,16 @@
 //!
 //! This is the L4 binary entry point. It wires all subsystem crates together
 //! and exposes them through a unified command-line interface.
+//!
+//! **Performance (NFR-001):** clap parses arguments before any subsystem is
+//! initialised.  `--help` must complete in < 50 ms cold.
 
-use clap::{Parser, Subcommand};
+mod commands;
+mod exit_codes;
+
+use clap::Parser;
+use commands::Commands;
+use exit_codes::exit_code_for_error;
 
 /// Forge MCP — discover, inspect, and audit MCP servers.
 #[derive(Parser, Debug)]
@@ -25,56 +33,11 @@ struct Cli {
     command: Option<Commands>,
 }
 
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Discover MCP servers on this machine and local network
-    Discover {
-        /// Output results as JSON
-        #[arg(long)]
-        json: bool,
-    },
-    /// Inspect a specific MCP server (tools, resources, prompts)
-    Inspect {
-        /// MCP server URI (e.g. stdio://path/to/server or http://localhost:3000)
-        server: String,
-        /// Output results as JSON
-        #[arg(long)]
-        json: bool,
-    },
-    /// Capture and display live MCP traffic
-    Traffic {
-        /// MCP server URI to monitor
-        server: String,
-    },
-    /// Run health checks against an MCP server
-    Health {
-        /// MCP server URI to check
-        server: String,
-    },
-    /// Run security audit against an MCP server
-    Audit {
-        /// MCP server URI to audit
-        server: String,
-    },
-    /// Run MCP conformance test suite against a server
-    Conform {
-        /// MCP server URI to test
-        server: String,
-    },
-    /// Start the background monitoring daemon
-    Daemon {
-        /// Detach and run in background
-        #[arg(long)]
-        detach: bool,
-    },
-    /// Launch the interactive terminal UI
-    Tui,
-}
-
 fn main() {
+    // ── 1. Parse args (fast path — no subsystem init) ───────────────────────
     let cli = Cli::parse();
 
-    // Initialise tracing based on verbosity flag
+    // ── 2. Initialise tracing after parse so --help stays sub-1ms ──────────
     let level = match cli.verbose {
         0 => tracing::Level::WARN,
         1 => tracing::Level::DEBUG,
@@ -85,20 +48,24 @@ fn main() {
         .with_target(false)
         .init();
 
-    match cli.command {
+    // ── 3. Dispatch ─────────────────────────────────────────────────────────
+    let result = match &cli.command {
         None => {
-            // No subcommand — print help and exit 0
+            // No subcommand — print help and exit 0.
             use clap::CommandFactory;
             Cli::command().print_help().expect("failed to print help");
             println!();
+            return;
         }
         Some(cmd) => {
             tracing::debug!(?cmd, "dispatching subcommand");
-            eprintln!(
-                "forge-mcp: subcommand not yet implemented — \
-                 this scaffold will be fleshed out in subsequent stories."
-            );
-            std::process::exit(1);
+            commands::dispatch(cmd)
         }
+    };
+
+    // ── 4. Map errors → exit codes ──────────────────────────────────────────
+    if let Err(err) = result {
+        eprintln!("forge-mcp: error: {err}");
+        std::process::exit(exit_code_for_error(&err));
     }
 }
