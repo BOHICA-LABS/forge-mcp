@@ -18,7 +18,9 @@
 //! | `discovery` | ✗ | Effectful; `discover_configs()` |
 //! | `error` | ✓ | `DiscoveryError`, `ConfigError` enums |
 //! | `parser` | ✓ | `parse_config()` pure function |
+//! | `aggregator` | ✓ | `aggregate_configs()` pure function |
 
+pub mod aggregator;
 pub mod discovery;
 pub mod error;
 pub mod parser;
@@ -26,6 +28,7 @@ pub mod paths;
 pub mod types;
 
 // Re-export the most commonly used items at the crate root.
+pub use aggregator::aggregate_configs;
 pub use discovery::discover_configs;
 pub use error::{ConfigError, DiscoveryError};
 pub use parser::{parse_config, ParseInput};
