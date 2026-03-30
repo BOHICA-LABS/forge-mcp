@@ -15,13 +15,18 @@ pub mod daemon;
 pub mod error;
 pub mod pool;
 pub mod session;
+pub mod socket;
 
 // Convenience re-exports.
 pub use daemon::{
-    DaemonClient, DaemonServer, SessionHandle, daemon_socket_path,
+    DaemonClient, DaemonServer, SessionHandle,
     get_or_start_daemon, get_or_start_daemon_at, request_connection,
     DAEMON_START_TIMEOUT_SECS,
 };
 pub use error::{DaemonError, Result};
 pub use pool::{ConnectionFactory, NamedSession, PoolConfig, PoolableConnection, SessionPool};
 pub use session::SessionId;
+pub use socket::{
+    SocketConflictResolution, check_pid_lock, daemon_socket_path,
+    pid_lock_path, remove_pid_lock, resolve_socket_conflict, write_pid_lock,
+};

@@ -14,6 +14,18 @@ pub enum DaemonError {
     #[error("failed to bind daemon socket at {path}: {cause}")]
     SocketBind { path: String, cause: String },
 
+    /// E-DAE-002: Socket conflict detected — another daemon is alive at the path.
+    #[error("E-DAE-002: socket conflict at {path}: daemon already running")]
+    SocketConflict { path: String },
+
+    /// E-DAE-003: Stale socket was found and removed.
+    #[error("E-DAE-003: stale socket removed at {path}")]
+    StaleSocketRemoved { path: String },
+
+    /// E-DAE-004: Cannot acquire the daemon lock (permission denied or locked).
+    #[error("E-DAE-004: cannot acquire lock at {path}: {cause}")]
+    LockAcquireFailed { path: String, cause: String },
+
     /// IPC communication error.
     #[error("IPC error: {0}")]
     Ipc(String),
