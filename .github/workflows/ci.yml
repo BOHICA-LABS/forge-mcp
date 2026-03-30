@@ -55,6 +55,9 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+
       - name: Cache cargo registry & build artifacts
         uses: Swatinem/rust-cache@v2
         with:
@@ -115,6 +118,9 @@ jobs:
 
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Cache cargo registry & build artifacts
         uses: Swatinem/rust-cache@v2
