@@ -20,6 +20,7 @@ http = "1"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
 jsonschema = { version = "0.45", default-features = false }
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 forge-test-http-server = { path = "../../tests/forge-test-http-server" }

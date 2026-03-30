@@ -1,4 +1,4 @@
-//! Progress event bus for MCP `notifications/progress` dispatching.
+//! Progress event bus and message capture types for MCP protocol events.
 //!
 //! ## Responsibilities
 //! - Broadcast `ProgressEvent` to all subscribers via tokio broadcast channel
@@ -149,4 +149,79 @@ impl Default for ProgressBus {
 fn token_key(token: &ProgressToken) -> String {
     let ProgressToken(inner) = token;
     inner.to_string()
+}
+
+// ── Message capture types (STORY-027) ─────────────────────────────────────────
+
+/// Direction of a captured JSON-RPC message.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MessageDirection {
+    /// Message sent from the MCP client to the server.
+    ClientToServer,
+    /// Message sent from the MCP server to the client.
+    ServerToClient,
+}
+
+/// A single captured JSON-RPC message event.
+///
+/// Emitted on the [`CaptureChannel`] for every message that passes through
+/// `forge-core` in either direction.  The payload is byte-identical to the
+/// wire payload (VP-006 content integrity).
+#[derive(Debug, Clone)]
+pub struct MessageCaptured {
+    /// Unique identifier for this capture event.
+    pub id: uuid::Uuid,
+    /// Which direction the message was travelling.
+    pub direction: MessageDirection,
+    /// The JSON-RPC method name, if present (requests and notifications).
+    /// `None` for responses.
+    pub method: Option<String>,
+    /// The raw JSON payload — byte-identical to the wire representation.
+    pub payload: serde_json::Value,
+    /// Wall-clock timestamp at the moment of capture.
+    pub timestamp: std::time::Instant,
+}
+
+/// Broadcast channel for [`MessageCaptured`] events.
+///
+/// Multiple consumers (forge-traffic, forge-health, forge-security, forge-tui)
+/// can subscribe independently via [`CaptureChannel::subscribe`].
+///
+/// Follows AD-004 event-driven architecture.
+pub struct CaptureChannel {
+    tx: tokio::sync::broadcast::Sender<MessageCaptured>,
+}
+
+impl CaptureChannel {
+    /// Create a new `CaptureChannel` with the given broadcast buffer capacity.
+    pub fn new(_capacity: usize) -> Self {
+        todo!()
+    }
+
+    /// Subscribe to future [`MessageCaptured`] events.
+    ///
+    /// Returns a [`tokio::sync::broadcast::Receiver`] that will receive all
+    /// messages broadcast after this call.  Events sent before subscription
+    /// are not replayed.
+    pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<MessageCaptured> {
+        todo!()
+    }
+}
+
+/// Capture a single JSON-RPC message and broadcast it on the given channel.
+///
+/// This is a stub — no implementation logic yet.
+///
+/// # Arguments
+/// * `tx`        – The broadcast sender to emit the event on.
+/// * `direction` – Which way the message was travelling.
+/// * `method`    – The JSON-RPC method name, if applicable.
+/// * `payload`   – The raw JSON payload.
+pub fn capture_message(
+    _tx: &tokio::sync::broadcast::Sender<MessageCaptured>,
+    _direction: MessageDirection,
+    _method: Option<String>,
+    _payload: serde_json::Value,
+) {
+    todo!()
 }

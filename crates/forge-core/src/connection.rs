@@ -28,6 +28,7 @@ use rmcp::{
 };
 
 use crate::error::{CoreError, Result};
+use crate::events::MessageCaptured;
 use crate::types::{FeatureSet, NegotiatedCapabilities, features_for_version};
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -182,6 +183,12 @@ pub struct McpConnection<H: ClientHandler = ()> {
     /// Used by `protocol::list_roots()` to return the current roots without a
     /// network round-trip (roots are a client-side concept).
     pub(crate) root_uris: Vec<String>,
+    /// Optional broadcast sender for transparent message capture (STORY-027).
+    ///
+    /// When `Some`, every JSON-RPC message flowing through this connection
+    /// (both directions) is broadcast on this channel.  When `None`, capture
+    /// is disabled and no overhead is incurred.
+    pub(crate) capture_tx: Option<tokio::sync::broadcast::Sender<MessageCaptured>>,
 }
 
 impl<H: ClientHandler> fmt::Debug for McpConnection<H> {
@@ -234,6 +241,7 @@ impl<H: ClientHandler> McpConnection<H> {
             version_features,
             version_warning,
             root_uris: vec![],
+            capture_tx: None,
         }
     }
 
@@ -282,6 +290,7 @@ impl<H: ClientHandler> McpConnection<H> {
             version_features,
             version_warning,
             root_uris: vec![],
+            capture_tx: None,
         }
     }
 
@@ -571,6 +580,20 @@ impl<H: ClientHandler> McpConnection<H> {
             .call_tool(params)
             .await
             .map_err(|e| CoreError::Protocol(e.to_string()))
+    }
+
+    // ── Message capture (STORY-027) ───────────────────────────────────────────
+
+    /// Install a capture channel on this connection.
+    ///
+    /// After calling this, every JSON-RPC message flowing through the connection
+    /// (both directions) will be broadcast on `tx`.  This is a stub — no
+    /// intercept wiring is implemented yet.
+    pub fn install_capture_hook(
+        &mut self,
+        _tx: tokio::sync::broadcast::Sender<MessageCaptured>,
+    ) {
+        todo!()
     }
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
