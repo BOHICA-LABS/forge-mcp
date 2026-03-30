@@ -22,6 +22,14 @@ use forge_core::{ConnectionState, ForgeError, TransportKind, connect_stdio, conn
 /// We use `cargo build` (already done by `cargo test`) and resolve the binary
 /// via the CARGO_BIN_EXE environment variable that `cargo test` injects when
 /// the binary is listed as a `[[bin]]` in the dev-dependencies.
+///
+/// Resolution order:
+/// 1. `CARGO_BIN_EXE_forge-test-server` env var (set when the binary is a
+///    dev-dependency of the test crate — ideal path).
+/// 2. Scan `target/<triple>/debug/` subdirectories (handles CI runs with
+///    `--target <triple>` that place binaries under a target-triple prefix).
+/// 3. Fallback: `target/debug/forge-test-server` (local `cargo test` without
+///    an explicit `--target` flag).
 fn test_server_bin() -> String {
     // When run via `cargo test`, Cargo sets CARGO_BIN_EXE_<name> for each
     // binary in the workspace that is a dev-dep or integration test binary.
@@ -36,11 +44,22 @@ fn test_server_bin() -> String {
         .parent()  // crates/
         .and_then(|p| p.parent()) // workspace root
         .expect("expected workspace root");
-    let bin = workspace_root
-        .join("target")
+    let target_dir = workspace_root.join("target");
+    // Check target-triple subdirectories first (CI with --target <triple>).
+    if let Ok(entries) = std::fs::read_dir(&target_dir) {
+        for entry in entries.flatten() {
+            let candidate = entry.path().join("debug").join("forge-test-server");
+            if candidate.exists() {
+                return candidate.to_string_lossy().to_string();
+            }
+        }
+    }
+    // Fallback: plain target/debug (local builds without --target).
+    target_dir
         .join("debug")
-        .join("forge-test-server");
-    bin.to_string_lossy().to_string()
+        .join("forge-test-server")
+        .to_string_lossy()
+        .to_string()
 }
 
 // ── AC-001: Successful connection ─────────────────────────────────────────────

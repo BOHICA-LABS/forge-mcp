@@ -58,6 +58,9 @@ jobs:
       - name: cargo check
         run: cargo check --workspace --target ${{ matrix.target }}
 
+      - name: Build test servers
+        run: cargo build -p forge-test-server -p forge-test-http-server --target ${{ matrix.target }}
+
       - name: cargo test
         run: cargo test --workspace --target ${{ matrix.target }}
 

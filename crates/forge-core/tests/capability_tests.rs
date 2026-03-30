@@ -29,6 +29,14 @@ use forge_core::{connect_stdio, CoreError};
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 /// Resolve the path to the `forge-test-server` binary.
+///
+/// Resolution order:
+/// 1. `CARGO_BIN_EXE_forge-test-server` env var (set when the binary is a
+///    dev-dependency of the test crate — ideal path).
+/// 2. Scan `target/<triple>/debug/` subdirectories (handles CI runs with
+///    `--target <triple>` that place binaries under a target-triple prefix).
+/// 3. Fallback: `target/debug/forge-test-server` (local `cargo test` without
+///    an explicit `--target` flag).
 fn test_server_bin() -> String {
     if let Ok(path) = std::env::var("CARGO_BIN_EXE_forge-test-server") {
         return path;
@@ -39,8 +47,18 @@ fn test_server_bin() -> String {
         .parent() // crates/
         .and_then(|p| p.parent()) // workspace root
         .expect("expected workspace root");
-    workspace_root
-        .join("target")
+    let target_dir = workspace_root.join("target");
+    // Check target-triple subdirectories first (CI with --target <triple>).
+    if let Ok(entries) = std::fs::read_dir(&target_dir) {
+        for entry in entries.flatten() {
+            let candidate = entry.path().join("debug").join("forge-test-server");
+            if candidate.exists() {
+                return candidate.to_string_lossy().to_string();
+            }
+        }
+    }
+    // Fallback: plain target/debug (local builds without --target).
+    target_dir
         .join("debug")
         .join("forge-test-server")
         .to_string_lossy()
