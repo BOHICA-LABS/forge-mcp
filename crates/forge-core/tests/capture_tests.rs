@@ -9,11 +9,9 @@
 
 #![allow(non_snake_case)]
 
-use forge_core::events::{
-    CaptureChannel, MessageCaptured, MessageDirection, capture_message,
-};
+use forge_core::events::{CaptureChannel, MessageCaptured, MessageDirection, capture_message};
 use proptest::prelude::*;
-use proptest::test_runner::{TestRunner, Config as ProptestConfig};
+use proptest::test_runner::{Config as ProptestConfig, TestRunner};
 use serde_json::json;
 use std::time::Instant;
 use tokio::sync::broadcast;
@@ -86,7 +84,10 @@ async fn test_BC_4_09_001_all_messages_captured() {
         Some("tools/list"),
         "method must match the request method"
     );
-    assert_eq!(evt1.payload, client_payload, "payload must be byte-identical");
+    assert_eq!(
+        evt1.payload, client_payload,
+        "payload must be byte-identical"
+    );
 
     // Second event — server→client
     let evt2: MessageCaptured = rx.recv().await.expect("should receive server→client event");
@@ -95,10 +96,7 @@ async fn test_BC_4_09_001_all_messages_captured() {
         MessageDirection::ServerToClient,
         "second event must be ServerToClient"
     );
-    assert!(
-        evt2.method.is_none(),
-        "response event has no method name"
-    );
+    assert!(evt2.method.is_none(), "response event has no method name");
     assert_eq!(
         evt2.payload, server_payload,
         "response payload must be byte-identical"
@@ -208,10 +206,22 @@ async fn test_BC_4_09_001_multiple_consumers() {
     assert_eq!(evt1.id, evt2.id, "UUID must match across consumers");
     assert_eq!(evt1.id, evt3.id, "UUID must match across consumers");
     assert_eq!(evt1.direction, evt2.direction, "direction must match");
-    assert_eq!(evt1.payload, evt2.payload, "payload must match across consumers");
-    assert_eq!(evt2.payload, evt3.payload, "payload must match across consumers");
-    assert_eq!(evt1.method, evt2.method, "method must match across consumers");
-    assert_eq!(evt2.method, evt3.method, "method must match across consumers");
+    assert_eq!(
+        evt1.payload, evt2.payload,
+        "payload must match across consumers"
+    );
+    assert_eq!(
+        evt2.payload, evt3.payload,
+        "payload must match across consumers"
+    );
+    assert_eq!(
+        evt1.method, evt2.method,
+        "method must match across consumers"
+    );
+    assert_eq!(
+        evt2.method, evt3.method,
+        "method must match across consumers"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -293,12 +303,7 @@ async fn test_capture_large_payload() {
     let large_string = "x".repeat(TARGET_LEN);
     let payload = serde_json::Value::String(large_string.clone());
 
-    capture_message(
-        &tx,
-        MessageDirection::ServerToClient,
-        None,
-        payload.clone(),
-    );
+    capture_message(&tx, MessageDirection::ServerToClient, None, payload.clone());
 
     let evt = rx.recv().await.expect("should receive large payload event");
 
@@ -310,7 +315,11 @@ async fn test_capture_large_payload() {
     // Double-check the string length was preserved exactly.
     match &evt.payload {
         serde_json::Value::String(s) => {
-            assert_eq!(s.len(), TARGET_LEN, "string length must be preserved exactly");
+            assert_eq!(
+                s.len(),
+                TARGET_LEN,
+                "string length must be preserved exactly"
+            );
         }
         other => panic!("expected String payload, got: {other:?}"),
     }
