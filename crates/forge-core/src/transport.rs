@@ -3,24 +3,28 @@
 //! This module is **effectful** — it spawns child processes and performs I/O.
 //! All pure logic lives in `connection.rs`.
 //!
-//! # Design
-//! - Uses `rmcp`'s `TokioChildProcess` transport exclusively (AD-002 / NFR-014).
-//!   No raw JSON-RPC framing in this crate.
-//! - Env-var expansion is performed at call time against the calling process's
-//!   environment; values from `env` override the base environment.
+//! Supported transports:
+//! - `connect_stdio()` — JSON-RPC over child-process stdin/stdout (STORY-007)
+//! - `connect_http()` — Streamable HTTP transport (STORY-008)
 
-use std::collections::HashMap;
-use std::time::Duration;
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
+use http::{HeaderName, HeaderValue};
 use rmcp::ServiceExt;
 use rmcp::transport::TokioChildProcess;
+use rmcp::transport::streamable_http_client::{
+    StreamableHttpClientTransport, StreamableHttpClientTransportConfig,
+};
 use tokio::process::Command;
+use tracing::warn;
 
 use crate::connection::{McpConnection, TransportKind};
-use crate::error::{ForgeError, Result};
+use crate::error::{CoreError, Result};
 
 /// Default timeout for the MCP `initialize` handshake.
 pub const DEFAULT_CONNECT_TIMEOUT_SECS: u64 = 30;
+
+// ── Stdio transport ──────────────────────────────────────────────────────────
 
 /// Connect to an MCP server via stdio transport.
 ///
@@ -28,13 +32,10 @@ pub const DEFAULT_CONNECT_TIMEOUT_SECS: u64 = 30;
 /// (merged on top of the calling process's environment), then performs
 /// the MCP initialize handshake.
 ///
-/// Returns a [`McpConnection`] that owns the child-process handle.
-/// When the `McpConnection` is dropped or shut down, the child process is killed.
-///
 /// # Errors
-/// - [`ForgeError::ServerNotFound`] — command not found / spawn failed
-/// - [`ForgeError::ConnectionTimeout`] — initialize did not complete within `timeout_secs`
-/// - [`ForgeError::ProtocolError`] — server sent invalid JSON-RPC
+/// - [`CoreError::ServerNotFound`] — command not found / spawn failed
+/// - [`CoreError::Timeout`] — initialize did not complete within `DEFAULT_CONNECT_TIMEOUT_SECS`
+/// - [`CoreError::Protocol`] — server sent invalid JSON-RPC
 pub async fn connect_stdio(
     command: &str,
     args: &[String],
@@ -68,11 +69,11 @@ pub async fn connect_stdio_with_timeout(
             || msg.contains("not found")
             || msg.contains("os error 2")
         {
-            ForgeError::ServerNotFound {
+            CoreError::ServerNotFound {
                 message: format!("{command}: {msg}"),
             }
         } else {
-            ForgeError::Io(e)
+            CoreError::Io(e)
         }
     })?;
 
@@ -82,25 +83,163 @@ pub async fn connect_stdio_with_timeout(
 
     let running = tokio::time::timeout(timeout, serve_fut)
         .await
-        .map_err(|_| ForgeError::ConnectionTimeout {
+        .map_err(|_| CoreError::ConnectionTimeout {
             seconds: timeout_secs,
         })?
-        .map_err(|e| ForgeError::ProtocolError {
-            message: e.to_string(),
-        })?;
+        .map_err(|e| CoreError::Protocol(e.to_string()))?;
 
     // ── 4. Wrap in forge's McpConnection ────────────────────────────────────
-    Ok(McpConnection::from_running_service(running, TransportKind::Stdio))
+    Ok(McpConnection::new(running, command, TransportKind::Stdio))
 }
 
-// ── Env var expansion ────────────────────────────────────────────────────────
+// ── HTTP transport ───────────────────────────────────────────────────────────
+
+/// Establish an MCP connection over the Streamable HTTP transport.
+///
+/// # Errors
+///
+/// | Condition | Error |
+/// |-----------|-------|
+/// | `http://` URL (non-TLS) | warning emitted; connection proceeds |
+/// | HTTP 401 from server | `CoreError::AuthenticationFailed` |
+/// | HTTP 503 / unreachable | `CoreError::ServerUnavailable` |
+/// | DNS failure | `CoreError::DnsResolutionFailed` |
+/// | TLS error | `CoreError::TlsError` |
+/// | Handshake timeout | `CoreError::Timeout` |
+/// | Invalid URL | `CoreError::Protocol` |
+/// | Session loss (HTTP 404) | `CoreError::SessionLostFatal` |
+pub async fn connect_http(
+    url: &str,
+    headers: &HashMap<String, String>,
+) -> Result<McpConnection<()>> {
+    // ── 1. URL validation / scheme warning ─────────────────────────────────
+    let effective_url = normalise_url(url)?;
+
+    // ── 2. Build custom headers map ────────────────────────────────────────
+    let mut custom_headers: HashMap<HeaderName, HeaderValue> = HashMap::new();
+    for (name, value) in headers {
+        let header_name = HeaderName::from_bytes(name.as_bytes())
+            .map_err(|e| CoreError::Protocol(format!("invalid header name {name:?}: {e}")))?;
+        let header_value = HeaderValue::from_str(value)
+            .map_err(|e| CoreError::Protocol(format!("invalid header value for {name:?}: {e}")))?;
+        custom_headers.insert(header_name, header_value);
+    }
+
+    // ── 3. Build transport config ───────────────────────────────────────────
+    let config = StreamableHttpClientTransportConfig::with_uri(Arc::from(effective_url.as_str()))
+        .custom_headers(custom_headers)
+        .reinit_on_expired_session(true);
+
+    let transport = StreamableHttpClientTransport::from_config(config);
+
+    // ── 4. Perform MCP initialize handshake ────────────────────────────────
+    let service = ().serve(transport).await.map_err(|e| {
+        classify_init_error(e, url)
+    })?;
+
+    Ok(McpConnection::new(service, url, TransportKind::Http))
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// Normalise the URL and emit `E-CON-010` for insecure `http://` scheme.
+fn normalise_url(url: &str) -> Result<String> {
+    let trimmed = url.trim();
+    let has_scheme = trimmed.contains("://");
+
+    let normalised = if has_scheme {
+        trimmed.to_string()
+    } else {
+        let with_scheme = format!("http://{trimmed}");
+        emit_insecure_warning(&with_scheme);
+        with_scheme
+    };
+
+    if normalised.starts_with("http://") {
+        emit_insecure_warning(&normalised);
+    }
+
+    let host_part = normalised
+        .strip_prefix("https://")
+        .or_else(|| normalised.strip_prefix("http://"))
+        .unwrap_or(&normalised);
+
+    if host_part.trim_matches('/').is_empty() {
+        return Err(CoreError::Protocol(format!("invalid URL: {url:?}")));
+    }
+
+    Ok(normalised)
+}
+
+/// Emit the `E-CON-010` warning to stderr.
+fn emit_insecure_warning(url: &str) {
+    let msg = format!("E-CON-010: insecure HTTP scheme for {url} — prefer HTTPS");
+    warn!("{}", msg);
+    eprintln!("WARNING: {msg}");
+}
+
+/// Map an rmcp `ClientInitializeError` to a `CoreError`.
+fn classify_init_error(e: rmcp::service::ClientInitializeError, url: &str) -> CoreError {
+    let msg = e.to_string();
+
+    if msg.contains("401") || msg.contains("Unauthorized") || msg.contains("unauthorized") {
+        return CoreError::AuthenticationFailed { url: url.to_string() };
+    }
+    if msg.contains("503") || msg.contains("Service Unavailable") {
+        return CoreError::ServerUnavailable {
+            status: "503".to_string(),
+            url: url.to_string(),
+        };
+    }
+    if msg.contains("connection refused")
+        || msg.contains("Connection refused")
+        || msg.contains("error sending request")
+        || msg.contains("os error 61")
+        || msg.contains("os error 111")
+        || msg.contains("tcp connect error")
+    {
+        return CoreError::ServerUnavailable {
+            status: "connection refused".to_string(),
+            url: url.to_string(),
+        };
+    }
+    if msg.contains("dns") || msg.contains("DNS") || msg.contains("resolve")
+        || msg.contains("No such host")
+    {
+        return CoreError::DnsResolutionFailed {
+            url: url.to_string(),
+            cause: msg,
+        };
+    }
+    if msg.contains("tls") || msg.contains("TLS") || msg.contains("certificate")
+        || msg.contains("Certificate")
+    {
+        return CoreError::TlsError {
+            url: url.to_string(),
+            cause: msg,
+        };
+    }
+    if msg.contains("timeout") || msg.contains("Timeout") || msg.contains("timed out") {
+        return CoreError::Timeout {
+            seconds: 0,
+            url: url.to_string(),
+        };
+    }
+    if msg.contains("404") || msg.contains("Session expired") {
+        return CoreError::SessionLostFatal {
+            url: url.to_string(),
+            cause: msg,
+        };
+    }
+
+    CoreError::Rmcp(format!("{url}: {msg}"))
+}
+
+// ── Env var expansion (stdio) ─────────────────────────────────────────────────
 
 /// Expand `${VAR}` and `$VAR` patterns in `value` using the calling process's
-/// environment.  Unset variables are left as-is (empty string substitution
-/// would silently break credentials).
+/// environment. Unset variables are left as-is.
 fn expand_env_value(value: &str) -> String {
-    // Use shellexpand-lite approach: process character-by-character.
-    // We support two syntaxes: `${VAR}` and `$VAR`.
     let mut result = String::with_capacity(value.len());
     let chars: Vec<char> = value.chars().collect();
     let mut i = 0;
@@ -114,7 +253,6 @@ fn expand_env_value(value: &str) -> String {
             }
 
             if chars[i] == '{' {
-                // ${VAR} syntax
                 i += 1;
                 let start = i;
                 while i < chars.len() && chars[i] != '}' {
@@ -122,17 +260,13 @@ fn expand_env_value(value: &str) -> String {
                 }
                 let var_name: String = chars[start..i].iter().collect();
                 if i < chars.len() {
-                    i += 1; // consume '}'
+                    i += 1;
                 }
                 match std::env::var(&var_name) {
                     Ok(v) => result.push_str(&v),
-                    Err(_) => {
-                        // Leave unexpanded — do not silently zero out credentials.
-                        result.push_str(&format!("${{{var_name}}}"));
-                    }
+                    Err(_) => result.push_str(&format!("${{{var_name}}}")),
                 }
             } else if chars[i].is_alphanumeric() || chars[i] == '_' {
-                // $VAR syntax
                 let start = i;
                 while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '_') {
                     i += 1;
@@ -140,12 +274,9 @@ fn expand_env_value(value: &str) -> String {
                 let var_name: String = chars[start..i].iter().collect();
                 match std::env::var(&var_name) {
                     Ok(v) => result.push_str(&v),
-                    Err(_) => {
-                        result.push_str(&format!("${var_name}"));
-                    }
+                    Err(_) => result.push_str(&format!("${var_name}")),
                 }
             } else {
-                // Bare '$' not followed by a valid var — pass through.
                 result.push('$');
                 result.push(chars[i]);
                 i += 1;
@@ -159,7 +290,7 @@ fn expand_env_value(value: &str) -> String {
     result
 }
 
-// ── Pure unit tests for env-var expansion ────────────────────────────────────
+// ── Unit tests for env-var expansion ────────────────────────────────────────
 
 #[cfg(test)]
 mod expansion_tests {
@@ -172,7 +303,6 @@ mod expansion_tests {
 
     #[test]
     fn test_expand_braced_var() {
-        // SAFETY: single-threaded unit test with a unique key.
         unsafe { std::env::set_var("_FORGE_TEST_VAR", "expanded_value") };
         assert_eq!(
             expand_env_value("prefix_${_FORGE_TEST_VAR}_suffix"),
@@ -182,14 +312,12 @@ mod expansion_tests {
 
     #[test]
     fn test_expand_unbraced_var() {
-        // SAFETY: single-threaded unit test with a unique key.
         unsafe { std::env::set_var("_FORGE_TEST_VAR2", "value2") };
         assert_eq!(expand_env_value("$_FORGE_TEST_VAR2/rest"), "value2/rest");
     }
 
     #[test]
     fn test_expand_missing_var_leaves_placeholder() {
-        // An unset variable must NOT be silently zeroed — leave it as-is.
         let result = expand_env_value("${_FORGE_UNSET_XYZ_12345}");
         assert_eq!(result, "${_FORGE_UNSET_XYZ_12345}");
     }
