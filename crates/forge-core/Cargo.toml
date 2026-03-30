@@ -29,6 +29,7 @@ rmcp = { workspace = true }
 tokio-util = { version = "0.7" }
 tempfile = "3"
 wiremock = "0.6"
+proptest = "1"
 
 [[test]]
 name = "protocol_tests"
@@ -61,3 +62,7 @@ path = "tests/sampling_proxy_tests.rs"
 [[test]]
 name = "progress_cancel_tests"
 path = "tests/progress_cancel_tests.rs"
+
+[[test]]
+name = "capture_tests"
+path = "tests/capture_tests.rs"
