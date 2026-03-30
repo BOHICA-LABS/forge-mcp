@@ -21,9 +21,10 @@ use rmcp::{
     model::{
         ClientCapabilities, ClientInfo, CreateElicitationRequestParams, CreateElicitationResult,
         CreateMessageRequestParams, CreateMessageResult, ElicitationAction, ElicitationCapability,
-        ErrorCode, Implementation, ListRootsResult, Root, RootsCapabilities, SamplingCapability,
+        ErrorCode, Implementation, ListRootsResult, LoggingMessageNotificationParam, Root,
+        RootsCapabilities, SamplingCapability,
     },
-    service::{RequestContext, RoleClient},
+    service::{NotificationContext, RequestContext, RoleClient},
 };
 
 use crate::llm_proxy::LlmProxy;
@@ -264,6 +265,27 @@ impl ClientHandler for ForgeClientHandler {
             Ok(elicitation_tui_stub(request))
         };
         std::future::ready(result)
+    }
+
+    /// `notifications/message` — route incoming log entries.
+    ///
+    /// AC-004: Log messages received from the server are routable to the TUI
+    /// log panel (when active) or to stderr (CLI mode).  Since the TUI is not
+    /// built yet, we always route to stderr here.
+    ///
+    /// Format: `[MCP LOG <LEVEL>] <logger>: <data>`
+    fn on_logging_message(
+        &self,
+        params: LoggingMessageNotificationParam,
+        _context: NotificationContext<RoleClient>,
+    ) -> impl std::future::Future<Output = ()> + Send + '_ {
+        let level = format!("{:?}", params.level);
+        let logger = params.logger.as_deref().unwrap_or("server");
+        let data = serde_json::to_string(&params.data)
+            .unwrap_or_else(|_| params.data.to_string());
+        // Route to stderr (CLI mode). TUI routing will be added in a future story.
+        eprintln!("[MCP LOG {level}] {logger}: {data}");
+        std::future::ready(())
     }
 }
 

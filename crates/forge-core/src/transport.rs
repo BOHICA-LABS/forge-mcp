@@ -227,6 +227,8 @@ pub async fn connect_stdio_with_config_and_timeout(
     })?;
 
     // ── 3. Build handler with configurable capabilities ──────────────────────
+    // Extract root URIs before moving config into the handler.
+    let root_uris = build_root_uris(&config.root_paths);
     let handler = ForgeClientHandler::new(config);
     let advertised_caps = handler.client_info().capabilities.clone();
 
@@ -244,8 +246,14 @@ pub async fn connect_stdio_with_config_and_timeout(
     // ── 5. Extract negotiated capabilities ────────────────────────────────────
     let caps = extract_capabilities_from_forge_service(&running, &advertised_caps);
 
-    // ── 6. Wrap in McpConnection ─────────────────────────────────────────────
-    Ok(McpConnection::new(running, command, TransportKind::Stdio, caps))
+    // ── 6. Wrap in McpConnection (includes root_uris for protocol::list_roots)
+    Ok(McpConnection::new_with_roots(
+        running,
+        command,
+        TransportKind::Stdio,
+        caps,
+        root_uris,
+    ))
 }
 
 /// Connect to an MCP server over HTTP with configurable client capabilities.
@@ -278,6 +286,8 @@ pub async fn connect_http_with_config(
     let transport = StreamableHttpClientTransport::from_config(transport_config);
 
     // ── 4. Build handler with configurable capabilities ──────────────────────
+    // Extract root URIs before moving config into the handler.
+    let root_uris = build_root_uris(&config.root_paths);
     let handler = ForgeClientHandler::new(config);
     let advertised_caps = handler.client_info().capabilities.clone();
 
@@ -289,7 +299,7 @@ pub async fn connect_http_with_config(
     // ── 6. Extract negotiated capabilities ────────────────────────────────────
     let caps = extract_capabilities_from_forge_service(&service, &advertised_caps);
 
-    Ok(McpConnection::new(service, url, TransportKind::Http, caps))
+    Ok(McpConnection::new_with_roots(service, url, TransportKind::Http, caps, root_uris))
 }
 
 // ── HTTP transport ───────────────────────────────────────────────────────────
@@ -348,6 +358,17 @@ pub async fn connect_http(
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// Build `file://` URI strings from a list of `PathBuf` root paths.
+///
+/// These URIs are stored on `McpConnection` so that `protocol::list_roots()`
+/// can return them without a network round-trip.
+fn build_root_uris(root_paths: &[std::path::PathBuf]) -> Vec<String> {
+    root_paths
+        .iter()
+        .map(|p| format!("file://{}", p.to_string_lossy()))
+        .collect()
+}
 
 /// Normalise the URL and emit `E-CON-010` for insecure `http://` scheme.
 fn normalise_url(url: &str) -> Result<String> {
