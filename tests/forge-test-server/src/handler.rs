@@ -1,7 +1,7 @@
 //! MockServer: implements the rmcp `ServerHandler` trait.
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rmcp::model::{
     AnnotateAble, CallToolRequestParams, CallToolResult, CompleteRequestParams, CompleteResult,
@@ -137,20 +137,14 @@ impl MockServer {
         }
 
         if self.config.pagination.loop_cursor {
-            let start = cursor
-                .and_then(decode_cursor)
-                .unwrap_or(0)
-                .min(items.len());
+            let start = cursor.and_then(decode_cursor).unwrap_or(0).min(items.len());
             let end = (start + page_size).min(items.len());
             let page = items[start..end].to_vec();
             // Always return the same cursor — simulates an infinite-loop server.
             return (page, Some(encode_cursor(start)));
         }
 
-        let start = cursor
-            .and_then(decode_cursor)
-            .unwrap_or(0)
-            .min(items.len());
+        let start = cursor.and_then(decode_cursor).unwrap_or(0).min(items.len());
         let end = (start + page_size).min(items.len());
         let page = items[start..end].to_vec();
         let next_cursor = if end < items.len() {
@@ -353,8 +347,7 @@ impl ServerHandler for MockServer {
         _context: RequestContext<RoleServer>,
     ) -> Result<CompleteResult, McpError> {
         self.maybe_delay().await;
-        let info = CompletionInfo::new(vec!["mock-completion".to_string()])
-            .expect("always valid");
+        let info = CompletionInfo::new(vec!["mock-completion".to_string()]).expect("always valid");
         Ok(CompleteResult::new(info))
     }
 
@@ -367,17 +360,11 @@ impl ServerHandler for MockServer {
         Ok(())
     }
 
-    async fn ping(
-        &self,
-        _context: RequestContext<RoleServer>,
-    ) -> Result<(), McpError> {
+    async fn ping(&self, _context: RequestContext<RoleServer>) -> Result<(), McpError> {
         Ok(())
     }
 
-    async fn on_initialized(
-        &self,
-        _context: NotificationContext<RoleServer>,
-    ) {
+    async fn on_initialized(&self, _context: NotificationContext<RoleServer>) {
         tracing::info!("forge-test-server: client initialized");
     }
 }

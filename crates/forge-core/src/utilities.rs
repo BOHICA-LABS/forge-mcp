@@ -15,8 +15,8 @@
 use rmcp::{
     ClientHandler,
     model::{
-        ArgumentInfo, CompleteRequestParams, CompleteResult, LoggingLevel, Reference,
-        Root, SetLevelRequestParams,
+        ArgumentInfo, CompleteRequestParams, CompleteResult, LoggingLevel, Reference, Root,
+        SetLevelRequestParams,
     },
 };
 
@@ -48,10 +48,7 @@ pub fn list_roots<H: ClientHandler>(conn: &McpConnection<H>) -> Result<Vec<Root>
     // from the root_uris stored on the connection's handler config.
     // Since McpConnection doesn't directly expose the handler, we expose
     // the root_uris via `root_uris()` below in the helper.
-    Ok(conn.root_uris()
-        .into_iter()
-        .map(Root::new)
-        .collect())
+    Ok(conn.root_uris().into_iter().map(Root::new).collect())
 }
 
 /// Send a `notifications/roots/list_changed` notification to the server.
@@ -64,16 +61,16 @@ pub fn list_roots<H: ClientHandler>(conn: &McpConnection<H>) -> Result<Vec<Root>
 /// client capability.
 /// Returns `Err(E-PRO-001)` if the notification could not be sent (transport
 /// error).
-pub async fn notify_roots_list_changed<H: ClientHandler>(
-    conn: &McpConnection<H>,
-) -> Result<()> {
+pub async fn notify_roots_list_changed<H: ClientHandler>(conn: &McpConnection<H>) -> Result<()> {
     if !conn.supports_roots() {
         return Err(CoreError::CapabilityNotSupported {
             method: "notifications/roots/list_changed".to_string(),
             capability: "roots".to_string(),
         });
     }
-    let peer = conn.peer().ok_or_else(|| CoreError::Protocol("no peer".to_string()))?;
+    let peer = conn
+        .peer()
+        .ok_or_else(|| CoreError::Protocol("no peer".to_string()))?;
     peer.notify_roots_list_changed()
         .await
         .map_err(|e| CoreError::Protocol(e.to_string()))
@@ -101,7 +98,9 @@ pub async fn set_log_level<H: ClientHandler>(
             capability: "logging".to_string(),
         });
     }
-    let peer = conn.peer().ok_or_else(|| CoreError::Protocol("no peer".to_string()))?;
+    let peer = conn
+        .peer()
+        .ok_or_else(|| CoreError::Protocol("no peer".to_string()))?;
     peer.set_level(SetLevelRequestParams::new(level))
         .await
         .map_err(|e| CoreError::Protocol(e.to_string()))
@@ -126,7 +125,9 @@ pub async fn complete<H: ClientHandler>(
     reference: Reference,
     argument: ArgumentInfo,
 ) -> Result<CompleteResult> {
-    let peer = conn.peer().ok_or_else(|| CoreError::Protocol("no peer".to_string()))?;
+    let peer = conn
+        .peer()
+        .ok_or_else(|| CoreError::Protocol("no peer".to_string()))?;
     let params = CompleteRequestParams::new(reference, argument);
     peer.complete(params)
         .await

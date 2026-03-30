@@ -240,11 +240,12 @@ fn validate_arguments(
     let schema_value = Value::Object(schema.clone());
 
     // Build the validator.
-    let compiled = jsonschema::validator_for(&schema_value)
-        .map_err(|e| CoreError::SchemaValidationFailed {
+    let compiled = jsonschema::validator_for(&schema_value).map_err(|e| {
+        CoreError::SchemaValidationFailed {
             tool: tool_name.to_string(),
             reason: format!("invalid inputSchema: {e}"),
-        })?;
+        }
+    })?;
 
     // Collect validation errors into a single message.
     let errors: Vec<String> = compiled
@@ -412,7 +413,10 @@ mod tests {
     fn test_BC_2_05_001_tool_error_is_error_true() {
         let raw = CallToolResult::error(vec![rmcp::model::Content::text("oops")]);
         let result = ToolResult::from(raw);
-        assert!(result.is_error, "isError=true must produce ToolResult.is_error=true");
+        assert!(
+            result.is_error,
+            "isError=true must produce ToolResult.is_error=true"
+        );
         assert_eq!(result.content.len(), 1);
     }
 
@@ -421,7 +425,10 @@ mod tests {
     fn test_BC_2_05_001_tool_success_is_error_false() {
         let raw = CallToolResult::success(vec![rmcp::model::Content::text("ok")]);
         let result = ToolResult::from(raw);
-        assert!(!result.is_error, "isError=false must produce ToolResult.is_error=false");
+        assert!(
+            !result.is_error,
+            "isError=false must produce ToolResult.is_error=false"
+        );
     }
 
     /// AC-004: isError absent → ToolResult { is_error: false } (defaults to non-error).
@@ -444,7 +451,10 @@ mod tests {
         let (inv, mut watcher) = ToolListInvalidator::new();
 
         // Initially fresh.
-        assert!(!watcher.is_stale(), "should not be stale before invalidation");
+        assert!(
+            !watcher.is_stale(),
+            "should not be stale before invalidation"
+        );
         assert_eq!(watcher.generation(), 0);
 
         // Invalidate.
@@ -459,7 +469,10 @@ mod tests {
 
         // Invalidate again.
         inv.invalidate();
-        assert!(watcher.is_stale(), "should be stale after second invalidation");
+        assert!(
+            watcher.is_stale(),
+            "should be stale after second invalidation"
+        );
         assert_eq!(watcher.generation(), 2);
     }
 

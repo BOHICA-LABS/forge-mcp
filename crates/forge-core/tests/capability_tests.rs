@@ -24,7 +24,7 @@
 
 use std::collections::HashMap;
 
-use forge_core::{connect_stdio, CoreError};
+use forge_core::{CoreError, connect_stdio};
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,11 @@ fn test_server_bin() -> String {
         .and_then(|p| p.parent()) // workspace root
         .expect("expected workspace root");
     let target_dir = workspace_root.join("target");
-    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
+    let bin_name = if cfg!(windows) {
+        "forge-test-server.exe"
+    } else {
+        "forge-test-server"
+    };
 
     // Check target-triple subdirectories first (CI with --target <triple>).
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
@@ -96,9 +100,18 @@ async fn test_BC_2_04_001_capabilities_match_server_advertisement() {
 
     // The mock server's `from_counts` enables all capabilities.
     assert!(conn.supports_tools(), "tools capability should be present");
-    assert!(conn.supports_resources(), "resources capability should be present");
-    assert!(conn.supports_prompts(), "prompts capability should be present");
-    assert!(conn.supports_logging(), "logging capability should be present");
+    assert!(
+        conn.supports_resources(),
+        "resources capability should be present"
+    );
+    assert!(
+        conn.supports_prompts(),
+        "prompts capability should be present"
+    );
+    assert!(
+        conn.supports_logging(),
+        "logging capability should be present"
+    );
 
     conn.shutdown().await.ok();
 }
@@ -144,7 +157,10 @@ async fn test_BC_2_04_002_no_tools_capability_returns_false() {
 
     // Server did not advertise tools.
     assert!(!conn.supports_tools(), "tools should not be supported");
-    assert!(!conn.supports_resources(), "resources should not be supported");
+    assert!(
+        !conn.supports_resources(),
+        "resources should not be supported"
+    );
     assert!(!conn.supports_prompts(), "prompts should not be supported");
     assert!(!conn.supports_logging(), "logging should not be supported");
 
@@ -216,10 +232,16 @@ async fn test_BC_2_04_003_all_capabilities_return_true() {
     let tools = conn.list_tools().await.expect("list_tools should succeed");
     assert_eq!(tools.tools.len(), 2, "expected 2 tools");
 
-    let resources = conn.list_resources().await.expect("list_resources should succeed");
+    let resources = conn
+        .list_resources()
+        .await
+        .expect("list_resources should succeed");
     assert_eq!(resources.resources.len(), 1, "expected 1 resource");
 
-    let prompts = conn.list_prompts().await.expect("list_prompts should succeed");
+    let prompts = conn
+        .list_prompts()
+        .await
+        .expect("list_prompts should succeed");
     assert_eq!(prompts.prompts.len(), 1, "expected 1 prompt");
 
     conn.shutdown().await.ok();

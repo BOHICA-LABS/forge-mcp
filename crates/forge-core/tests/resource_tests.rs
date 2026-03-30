@@ -13,10 +13,8 @@ use std::collections::HashMap;
 use std::io::Write;
 
 use forge_core::{
-    CoreError, connect_stdio,
-    list_resources, read_resource,
-    subscribe_resource, subscribe_resource_with_sender,
-    ResourceData,
+    CoreError, ResourceData, connect_stdio, list_resources, read_resource, subscribe_resource,
+    subscribe_resource_with_sender,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -41,7 +39,11 @@ fn test_server_bin() -> String {
         .and_then(|p| p.parent())
         .expect("expected workspace root");
     let target_dir = workspace_root.join("target");
-    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
+    let bin_name = if cfg!(windows) {
+        "forge-test-server.exe"
+    } else {
+        "forge-test-server"
+    };
 
     // Check target-triple subdirectories first (CI with --target <triple>).
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
@@ -111,15 +113,24 @@ async fn test_BC_2_05_002_list_resources_paginated() {
         .await
         .expect("connect should succeed");
 
-    assert!(conn.supports_resources(), "resources capability must be present");
+    assert!(
+        conn.supports_resources(),
+        "resources capability must be present"
+    );
 
-    let resources = list_resources(&conn).await.expect("list_resources should succeed");
+    let resources = list_resources(&conn)
+        .await
+        .expect("list_resources should succeed");
 
     assert_eq!(resources.len(), 5, "expected 5 resources across 3 pages");
 
     // Verify each resource has the expected URI and name.
     for (i, r) in resources.iter().enumerate() {
-        assert_eq!(r.uri, format!("resource://test/{i}"), "uri mismatch at index {i}");
+        assert_eq!(
+            r.uri,
+            format!("resource://test/{i}"),
+            "uri mismatch at index {i}"
+        );
         assert_eq!(r.name, format!("R{i}"), "name mismatch at index {i}");
         assert!(r.description.is_some(), "description should be present");
     }
@@ -167,8 +178,14 @@ async fn test_BC_2_05_002_list_resources_no_pagination() {
         .await
         .expect("connect should succeed");
 
-    let resources = list_resources(&conn).await.expect("list_resources should succeed");
-    assert_eq!(resources.len(), 2, "expected 2 resources with no pagination");
+    let resources = list_resources(&conn)
+        .await
+        .expect("list_resources should succeed");
+    assert_eq!(
+        resources.len(),
+        2,
+        "expected 2 resources with no pagination"
+    );
 
     conn.shutdown().await.ok();
 }
@@ -329,7 +346,11 @@ async fn test_BC_2_05_002_subscribe_resource() {
         .await
         .expect("subscribe_resource should succeed");
 
-    assert_eq!(sub.uri(), "resource://test/live", "subscription handle URI must match");
+    assert_eq!(
+        sub.uri(),
+        "resource://test/live",
+        "subscription handle URI must match"
+    );
 
     // Clean up — explicit unsubscribe.
     sub.unsubscribe().await.expect("unsubscribe should succeed");
@@ -383,7 +404,10 @@ async fn test_BC_2_05_002_subscribe_resource_with_sender_receives_update() {
         .expect("send should succeed");
 
     // The handle receives the update.
-    let update = sub.recv_update().await.expect("recv_update must return Some");
+    let update = sub
+        .recv_update()
+        .await
+        .expect("recv_update must return Some");
     assert_eq!(update, "resource://live/data", "received URI must match");
 
     sub.unsubscribe().await.expect("unsubscribe should succeed");
@@ -447,7 +471,11 @@ async fn test_BC_2_05_002_unsubscribe_resource() {
     let resources = list_resources(&conn)
         .await
         .expect("list_resources should still work after drop-unsubscribe");
-    assert_eq!(resources.len(), 1, "resource list should still return 1 resource");
+    assert_eq!(
+        resources.len(),
+        1,
+        "resource list should still return 1 resource"
+    );
 
     conn.shutdown().await.ok();
 }
@@ -537,7 +565,10 @@ async fn test_BC_2_05_002_capability_guard() {
         .await
         .expect("connect should succeed");
 
-    assert!(!conn.supports_resources(), "resources capability must be absent");
+    assert!(
+        !conn.supports_resources(),
+        "resources capability must be absent"
+    );
 
     // list_resources must fail with E-PRO-003.
     match list_resources(&conn).await {

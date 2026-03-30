@@ -93,7 +93,11 @@ impl ProgressBus {
         // Orphan / cancellation guard (E-PRO-006).
         let token_key = token_key(&event.token);
         {
-            let cancelled = self.inner.cancelled.lock().expect("cancelled lock poisoned");
+            let cancelled = self
+                .inner
+                .cancelled
+                .lock()
+                .expect("cancelled lock poisoned");
             if cancelled.contains(&token_key) {
                 // Silently drop — no error, no panic.
                 return;
@@ -113,14 +117,22 @@ impl ProgressBus {
     /// connection layer; this method only updates the bus-level guard.
     pub fn cancel_request(&self, token: ProgressToken) {
         let key = token_key(&token);
-        let mut cancelled = self.inner.cancelled.lock().expect("cancelled lock poisoned");
+        let mut cancelled = self
+            .inner
+            .cancelled
+            .lock()
+            .expect("cancelled lock poisoned");
         cancelled.insert(key);
     }
 
     /// Returns `true` if the given token has been cancelled.
     pub fn is_cancelled(&self, token: &ProgressToken) -> bool {
         let key = token_key(token);
-        let cancelled = self.inner.cancelled.lock().expect("cancelled lock poisoned");
+        let cancelled = self
+            .inner
+            .cancelled
+            .lock()
+            .expect("cancelled lock poisoned");
         cancelled.contains(&key)
     }
 }

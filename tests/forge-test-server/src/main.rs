@@ -10,8 +10,8 @@ use std::path::PathBuf;
 use clap::Parser;
 use config::MockConfig;
 use handler::MockServer;
-use rmcp::transport::stdio;
 use rmcp::ServiceExt;
+use rmcp::transport::stdio;
 
 #[derive(Parser, Debug)]
 #[command(name = "forge-test-server")]

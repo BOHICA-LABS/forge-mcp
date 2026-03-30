@@ -12,10 +12,10 @@ use rmcp::model::{
     CallToolRequestParams, GetPromptRequestParams, PaginatedRequestParams,
     ReadResourceRequestParams,
 };
-use rmcp::service::RoleClient;
-use rmcp::transport::TokioChildProcess;
 use rmcp::serve_client;
+use rmcp::service::RoleClient;
 use rmcp::service::RunningService;
+use rmcp::transport::TokioChildProcess;
 use tokio::process::Command;
 use tokio::time::timeout;
 
@@ -25,7 +25,11 @@ fn test_server_bin() -> PathBuf {
     if let Ok(p) = env::var("CARGO_BIN_EXE_forge-test-server") {
         return PathBuf::from(p);
     }
-    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
+    let bin_name = if cfg!(windows) {
+        "forge-test-server.exe"
+    } else {
+        "forge-test-server"
+    };
     // Fallback: look in the same directory as the current test binary.
     let exe = env::current_exe().expect("current_exe");
     let dir = exe.parent().expect("exe parent dir");
@@ -69,7 +73,10 @@ async fn test_initialize_returns_server_info() {
         info.capabilities.tools.is_some(),
         "tools capability should be present"
     );
-    assert!(info.capabilities.resources.is_some(), "resources capability");
+    assert!(
+        info.capabilities.resources.is_some(),
+        "resources capability"
+    );
     assert!(info.capabilities.prompts.is_some(), "prompts capability");
 }
 
@@ -87,10 +94,7 @@ async fn test_call_tool_success() {
         .call_tool(CallToolRequestParams::new("mock_tool_0"))
         .await
         .expect("call_tool");
-    assert!(
-        !result.is_error.unwrap_or(false),
-        "should not be an error"
-    );
+    assert!(!result.is_error.unwrap_or(false), "should not be an error");
     let text = result
         .content
         .first()
@@ -212,10 +216,7 @@ async fn test_list_all_tools_via_pagination() {
 #[tokio::test]
 async fn test_zero_tools() {
     let svc = spawn_client(&["--tools", "0"]).await;
-    let result = svc
-        .list_tools(None)
-        .await
-        .expect("list_tools with 0 tools");
+    let result = svc.list_tools(None).await.expect("list_tools with 0 tools");
     assert!(result.tools.is_empty());
     assert!(result.next_cursor.is_none());
 }

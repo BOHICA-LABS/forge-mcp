@@ -46,7 +46,10 @@ fn forge_client_info() -> ClientInfo {
         .enable_roots_list_changed()
         .build();
 
-    ClientInfo::new(caps, Implementation::new("forge-mcp", env!("CARGO_PKG_VERSION")))
+    ClientInfo::new(
+        caps,
+        Implementation::new("forge-mcp", env!("CARGO_PKG_VERSION")),
+    )
 }
 
 /// Extract `NegotiatedCapabilities` from a freshly-established `RunningService`.
@@ -62,12 +65,7 @@ fn extract_capabilities_from_service(
     let (server_caps, version) = service
         .peer()
         .peer_info()
-        .map(|info| {
-            (
-                info.capabilities.clone(),
-                info.protocol_version.to_string(),
-            )
-        })
+        .map(|info| (info.capabilities.clone(), info.protocol_version.to_string()))
         .unwrap_or_default();
 
     NegotiatedCapabilities::new(server_caps, advertised_client_caps.clone(), version)
@@ -81,12 +79,7 @@ fn extract_capabilities_from_forge_service(
     let (server_caps, version) = service
         .peer()
         .peer_info()
-        .map(|info| {
-            (
-                info.capabilities.clone(),
-                info.protocol_version.to_string(),
-            )
-        })
+        .map(|info| (info.capabilities.clone(), info.protocol_version.to_string()))
         .unwrap_or_default();
 
     NegotiatedCapabilities::new(server_caps, advertised_client_caps.clone(), version)
@@ -167,7 +160,12 @@ pub async fn connect_stdio_with_timeout(
     let caps = extract_capabilities_from_service(&running, &advertised_caps);
 
     // ── 6. Wrap in forge's McpConnection ────────────────────────────────────
-    Ok(McpConnection::new(running, command, TransportKind::Stdio, caps))
+    Ok(McpConnection::new(
+        running,
+        command,
+        TransportKind::Stdio,
+        caps,
+    ))
 }
 
 // ── Configurable transports (STORY-014) ─────────────────────────────────────
@@ -292,14 +290,21 @@ pub async fn connect_http_with_config(
     let advertised_caps = handler.client_info().capabilities.clone();
 
     // ── 5. Perform MCP initialize handshake ──────────────────────────────────
-    let service = handler.serve(transport).await.map_err(|e| {
-        classify_init_error(e, url)
-    })?;
+    let service = handler
+        .serve(transport)
+        .await
+        .map_err(|e| classify_init_error(e, url))?;
 
     // ── 6. Extract negotiated capabilities ────────────────────────────────────
     let caps = extract_capabilities_from_forge_service(&service, &advertised_caps);
 
-    Ok(McpConnection::new_with_roots(service, url, TransportKind::Http, caps, root_uris))
+    Ok(McpConnection::new_with_roots(
+        service,
+        url,
+        TransportKind::Http,
+        caps,
+        root_uris,
+    ))
 }
 
 // ── HTTP transport ───────────────────────────────────────────────────────────
@@ -347,9 +352,10 @@ pub async fn connect_http(
     let advertised_caps = client_info.capabilities.clone();
 
     // ── 5. Perform MCP initialize handshake ────────────────────────────────
-    let service = client_info.serve(transport).await.map_err(|e| {
-        classify_init_error(e, url)
-    })?;
+    let service = client_info
+        .serve(transport)
+        .await
+        .map_err(|e| classify_init_error(e, url))?;
 
     // ── 6. Extract negotiated capabilities ──────────────────────────────────
     let caps = extract_capabilities_from_service(&service, &advertised_caps);
@@ -411,7 +417,9 @@ fn classify_init_error(e: rmcp::service::ClientInitializeError, url: &str) -> Co
     let msg = e.to_string();
 
     if msg.contains("401") || msg.contains("Unauthorized") || msg.contains("unauthorized") {
-        return CoreError::AuthenticationFailed { url: url.to_string() };
+        return CoreError::AuthenticationFailed {
+            url: url.to_string(),
+        };
     }
     if msg.contains("503") || msg.contains("Service Unavailable") {
         return CoreError::ServerUnavailable {
@@ -431,7 +439,9 @@ fn classify_init_error(e: rmcp::service::ClientInitializeError, url: &str) -> Co
             url: url.to_string(),
         };
     }
-    if msg.contains("dns") || msg.contains("DNS") || msg.contains("resolve")
+    if msg.contains("dns")
+        || msg.contains("DNS")
+        || msg.contains("resolve")
         || msg.contains("No such host")
     {
         return CoreError::DnsResolutionFailed {
@@ -439,7 +449,9 @@ fn classify_init_error(e: rmcp::service::ClientInitializeError, url: &str) -> Co
             cause: msg,
         };
     }
-    if msg.contains("tls") || msg.contains("TLS") || msg.contains("certificate")
+    if msg.contains("tls")
+        || msg.contains("TLS")
+        || msg.contains("certificate")
         || msg.contains("Certificate")
     {
         return CoreError::TlsError {

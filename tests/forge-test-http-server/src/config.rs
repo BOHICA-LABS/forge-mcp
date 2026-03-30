@@ -32,8 +32,7 @@ impl Default for CapabilityConfig {
 }
 
 /// Configures how the server manages sessions.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SessionConfig {
     /// TTL in milliseconds after which a session is considered expired.
     /// `None` means sessions never expire.
@@ -44,7 +43,6 @@ pub struct SessionConfig {
     pub forget_after_n_requests: Option<u64>,
 }
 
-
 impl SessionConfig {
     pub fn ttl(&self) -> Option<Duration> {
         self.ttl_ms.map(Duration::from_millis)
@@ -52,8 +50,7 @@ impl SessionConfig {
 }
 
 /// Configures what notifications the server sends via SSE.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NotificationConfig {
     /// Send a progress notification after each tool call.
     pub progress_on_tool_call: bool,
@@ -62,7 +59,6 @@ pub struct NotificationConfig {
     /// Delay in milliseconds before sending notifications (0 = immediate).
     pub delay_ms: u64,
 }
-
 
 /// Top-level configuration for the mock HTTP MCP server.
 ///

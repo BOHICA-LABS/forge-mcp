@@ -16,8 +16,8 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use forge_core::{
-    ClientCapabilityConfig, CoreError, connect_stdio_with_config,
-    complete, list_roots, notify_roots_list_changed, set_log_level,
+    ClientCapabilityConfig, CoreError, complete, connect_stdio_with_config, list_roots,
+    notify_roots_list_changed, set_log_level,
 };
 use rmcp::model::{ArgumentInfo, LoggingLevel, Reference};
 
@@ -43,7 +43,11 @@ fn test_server_bin() -> String {
         .and_then(|p| p.parent()) // workspace root
         .expect("expected workspace root");
     let target_dir = workspace_root.join("target");
-    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
+    let bin_name = if cfg!(windows) {
+        "forge-test-server.exe"
+    } else {
+        "forge-test-server"
+    };
 
     // Check target-triple subdirectories first (CI with --target <triple>).
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
@@ -117,10 +121,7 @@ async fn test_BC_2_05_006_roots_list_and_change_notification() {
         enable_sampling: false,
         enable_elicitation: false,
         enable_roots: true,
-        root_paths: vec![
-            PathBuf::from(tmp1.path()),
-            PathBuf::from(tmp2.path()),
-        ],
+        root_paths: vec![PathBuf::from(tmp1.path()), PathBuf::from(tmp2.path())],
     };
 
     let conn = connect_stdio_with_config(&bin, &args, &env, client_config)
@@ -215,7 +216,10 @@ async fn test_BC_2_05_007_logging_level_control() {
         .expect("connect should succeed");
 
     // Server must advertise logging capability.
-    assert!(conn.supports_logging(), "logging capability must be supported");
+    assert!(
+        conn.supports_logging(),
+        "logging capability must be supported"
+    );
 
     // set_log_level() must succeed for each standard level.
     set_log_level(&conn, LoggingLevel::Debug)

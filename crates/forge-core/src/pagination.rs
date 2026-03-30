@@ -126,7 +126,12 @@ mod tests {
         let mut state = PaginationState::new();
         // Simulate: server returns first page with a cursor, second page without.
         let step = state.advance(Some("page:1".to_string()));
-        assert_eq!(step, PaginationStep::FetchPage { cursor: Some("page:1".to_string()) });
+        assert_eq!(
+            step,
+            PaginationStep::FetchPage {
+                cursor: Some("page:1".to_string())
+            }
+        );
         let step = state.advance(None);
         assert_eq!(step, PaginationStep::Done);
         assert_eq!(state.pages(), 2);
@@ -138,7 +143,12 @@ mod tests {
         let mut state = PaginationState::new();
         // First page: cursor "loop" returned.
         let step = state.advance(Some("loop".to_string()));
-        assert_eq!(step, PaginationStep::FetchPage { cursor: Some("loop".to_string()) });
+        assert_eq!(
+            step,
+            PaginationStep::FetchPage {
+                cursor: Some("loop".to_string())
+            }
+        );
         // Second page: same cursor returned again.
         let step = state.advance(Some("loop".to_string()));
         assert_eq!(step, PaginationStep::LoopDetected { pages: 2 });
@@ -173,7 +183,10 @@ mod tests {
     /// first_page() convenience returns FetchPage { cursor: None }.
     #[test]
     fn test_pagination_first_page_convenience() {
-        assert_eq!(PaginationState::first_page(), PaginationStep::FetchPage { cursor: None });
+        assert_eq!(
+            PaginationState::first_page(),
+            PaginationStep::FetchPage { cursor: None }
+        );
     }
 
     /// Different cursors on each page → no loop, terminates cleanly.
@@ -182,7 +195,10 @@ mod tests {
         let mut state = PaginationState::new();
         for i in 0..50 {
             let step = state.advance(Some(format!("c:{i}")));
-            assert!(matches!(step, PaginationStep::FetchPage { .. }), "page {i} should succeed");
+            assert!(
+                matches!(step, PaginationStep::FetchPage { .. }),
+                "page {i} should succeed"
+            );
         }
         let step = state.advance(None);
         assert_eq!(step, PaginationStep::Done);

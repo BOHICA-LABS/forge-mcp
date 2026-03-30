@@ -143,9 +143,7 @@ pub async fn resolve_socket_conflict(
             );
             return Ok(Some(SocketConflictResolution::UseExisting));
         }
-        Err(e) if e.kind() == ErrorKind::ConnectionRefused
-            || e.kind() == ErrorKind::NotFound =>
-        {
+        Err(e) if e.kind() == ErrorKind::ConnectionRefused || e.kind() == ErrorKind::NotFound => {
             // Socket file present but nothing listening → stale (E-DAE-003).
         }
         Err(e) if e.kind() == ErrorKind::PermissionDenied => {
@@ -234,10 +232,9 @@ pub async fn check_pid_lock(lock_path: &Path) -> Result<Option<u32>, DaemonError
         Err(e) => return Err(DaemonError::Io(e)),
     };
 
-    let pid: u32 = contents
-        .trim()
-        .parse()
-        .map_err(|_| DaemonError::Ipc(format!("invalid PID in lock file: {:?}", contents.trim())))?;
+    let pid: u32 = contents.trim().parse().map_err(|_| {
+        DaemonError::Ipc(format!("invalid PID in lock file: {:?}", contents.trim()))
+    })?;
 
     if is_process_alive(pid) {
         Ok(Some(pid))
@@ -287,9 +284,7 @@ fn is_process_alive(pid: u32) -> bool {
     {
         // kill(pid, 0) returns 0 if the process exists, ESRCH if not.
         // SAFETY: kill with sig=0 is a standard POSIX probe.
-        let ret = unsafe {
-            libc_kill(pid as i32, 0)
-        };
+        let ret = unsafe { libc_kill(pid as i32, 0) };
         ret == 0
     }
     #[cfg(not(unix))]
@@ -404,7 +399,9 @@ mod tests {
 
         // Write a dummy socket file (just a regular file is enough — nothing
         // is listening on it, so connect will fail with ConnectionRefused).
-        tokio::fs::write(&sock, b"stale").await.expect("write stale");
+        tokio::fs::write(&sock, b"stale")
+            .await
+            .expect("write stale");
 
         let result = resolve_socket_conflict(&sock)
             .await

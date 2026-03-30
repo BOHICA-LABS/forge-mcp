@@ -107,9 +107,7 @@ impl Drop for ResourceSubscription {
         let uri = self.uri.clone();
         // Spawn a detached task to send the unsubscribe RPC.
         tokio::spawn(async move {
-            let _ = peer
-                .unsubscribe(UnsubscribeRequestParams::new(uri))
-                .await;
+            let _ = peer.unsubscribe(UnsubscribeRequestParams::new(uri)).await;
         });
     }
 }

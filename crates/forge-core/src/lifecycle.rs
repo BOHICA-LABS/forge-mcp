@@ -273,10 +273,9 @@ impl ConnectionManager {
                             "marking connection {:?} as dead after {} missed pings",
                             key_task, max_missed
                         );
-                        entry.state = entry
-                            .state
-                            .clone()
-                            .mark_error(format!("keepalive timeout after {max_missed} missed pings"));
+                        entry.state = entry.state.clone().mark_error(format!(
+                            "keepalive timeout after {max_missed} missed pings"
+                        ));
                         break;
                     }
                 }
@@ -420,7 +419,11 @@ mod integration_tests {
         sleep(Duration::from_millis(300)).await;
 
         let state = mgr.state("srv1").await.expect("state should exist");
-        assert_eq!(state, ConnectionState::Connected, "state must remain Connected");
+        assert_eq!(
+            state,
+            ConnectionState::Connected,
+            "state must remain Connected"
+        );
         assert!(
             call_count.load(Ordering::Relaxed) >= 2,
             "at least 2 keepalive pings should have fired"
@@ -476,7 +479,9 @@ mod integration_tests {
         assert_eq!(state, ConnectionState::Connected);
 
         // Initiate graceful shutdown.
-        mgr.begin_shutdown("srv2").await.expect("begin_shutdown should succeed");
+        mgr.begin_shutdown("srv2")
+            .await
+            .expect("begin_shutdown should succeed");
 
         let state = mgr.state("srv2").await.unwrap();
         assert_eq!(state, ConnectionState::Disconnecting);
@@ -539,7 +544,11 @@ mod integration_tests {
             .expect("start_reconnect should succeed from Error state");
 
         let state = mgr.state("err-srv").await.unwrap();
-        assert_eq!(state, ConnectionState::Connecting, "state must be Connecting after reconnect");
+        assert_eq!(
+            state,
+            ConnectionState::Connecting,
+            "state must be Connecting after reconnect"
+        );
 
         // Now simulate successful reconnect.
         let call_count = Arc::new(AtomicU32::new(0));
@@ -548,7 +557,11 @@ mod integration_tests {
             .expect("mark_reconnected should succeed");
 
         let state = mgr.state("err-srv").await.unwrap();
-        assert_eq!(state, ConnectionState::Connected, "state must be Connected after mark_reconnected");
+        assert_eq!(
+            state,
+            ConnectionState::Connected,
+            "state must be Connected after mark_reconnected"
+        );
 
         mgr.remove("err-srv").await;
     }
@@ -580,11 +593,7 @@ mod integration_tests {
     /// `close_with_timeout` completes cleanly when the close_fn succeeds.
     #[tokio::test]
     async fn test_close_with_timeout_clean_shutdown() {
-        let result = close_with_timeout(
-            || async { Ok(()) },
-            Duration::from_secs(1),
-        )
-        .await;
+        let result = close_with_timeout(|| async { Ok(()) }, Duration::from_secs(1)).await;
 
         assert!(result.is_ok(), "clean shutdown should return Ok");
     }

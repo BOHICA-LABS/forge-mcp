@@ -11,7 +11,6 @@ use thiserror::Error;
 #[non_exhaustive]
 pub enum CoreError {
     // ── Connection errors ─────────────────────────────────────────────────
-
     /// E-CON-001: Server command not found or failed to spawn (stdio).
     #[error("E-CON-001: server command not found or failed to spawn: {message}")]
     ServerNotFound { message: String },
@@ -73,13 +72,11 @@ pub enum CoreError {
     ServerUnavailable { status: String, url: String },
 
     // ── DNS ───────────────────────────────────────────────────────────────
-
     /// E-CON-DNS: DNS resolution failed.
     #[error("E-CON-DNS: DNS resolution failed for {url}: {cause}")]
     DnsResolutionFailed { url: String, cause: String },
 
     // ── Protocol errors ───────────────────────────────────────────────────
-
     /// E-PRO-001: Protocol-level error (invalid JSON-RPC or unexpected response).
     #[error("E-PRO-001: MCP protocol error: {0}")]
     Protocol(String),
@@ -130,7 +127,6 @@ pub enum CoreError {
     ElicitationNonInteractive,
 
     // ── Generic / other ───────────────────────────────────────────────────
-
     /// An I/O error that doesn't map to a more specific code.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),

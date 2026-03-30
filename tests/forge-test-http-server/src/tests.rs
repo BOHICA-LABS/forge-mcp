@@ -18,8 +18,7 @@ mod tests {
 
     const INIT_BODY: &str = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}"#;
     const INIT_NOTIFICATION: &str = r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#;
-    const LIST_TOOLS_BODY: &str =
-        r#"{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}"#;
+    const LIST_TOOLS_BODY: &str = r#"{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}"#;
     const LIST_RESOURCES_BODY: &str =
         r#"{"jsonrpc":"2.0","id":3,"method":"resources/list","params":{}}"#;
 
@@ -104,11 +103,7 @@ mod tests {
             .await
             .expect("send");
 
-        assert_eq!(
-            resp.status(),
-            404,
-            "unknown session ID should return 404"
-        );
+        assert_eq!(resp.status(), 404, "unknown session ID should return 404");
 
         ct.cancel();
     }

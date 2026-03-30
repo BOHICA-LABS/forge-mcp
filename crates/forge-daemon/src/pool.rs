@@ -463,10 +463,19 @@ mod tests {
     #[tokio::test]
     async fn test_BC_1_03_001_session_pool_reuse() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+        let pool = SessionPool::new(
+            PoolConfig::default(),
+            counting_factory(Arc::clone(&counter)),
+        );
 
-        let h1 = pool.get_or_create("my-server").await.expect("first request");
-        let h2 = pool.get_or_create("my-server").await.expect("second request");
+        let h1 = pool
+            .get_or_create("my-server")
+            .await
+            .expect("first request");
+        let h2 = pool
+            .get_or_create("my-server")
+            .await
+            .expect("second request");
 
         assert_eq!(
             h1.session_id, h2.session_id,
@@ -594,7 +603,10 @@ mod tests {
     #[tokio::test]
     async fn test_manual_evict_removes_entry() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+        let pool = SessionPool::new(
+            PoolConfig::default(),
+            counting_factory(Arc::clone(&counter)),
+        );
 
         pool.get_or_create("srv").await.expect("create");
         assert_eq!(pool.len().await, 1);
@@ -608,7 +620,10 @@ mod tests {
     #[tokio::test]
     async fn test_BC_1_03_002_named_session_creation() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+        let pool = SessionPool::new(
+            PoolConfig::default(),
+            counting_factory(Arc::clone(&counter)),
+        );
 
         // Create a named session.
         let handle = pool
@@ -636,7 +651,10 @@ mod tests {
     #[tokio::test]
     async fn test_BC_1_03_002_unnamed_sessions_use_auto_id() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+        let pool = SessionPool::new(
+            PoolConfig::default(),
+            counting_factory(Arc::clone(&counter)),
+        );
 
         // Unnamed path — get_or_create by server name.
         let h1 = pool.get_or_create("anon-server").await.expect("first");
@@ -656,7 +674,10 @@ mod tests {
     #[tokio::test]
     async fn test_BC_1_03_002_named_session_resume() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+        let pool = SessionPool::new(
+            PoolConfig::default(),
+            counting_factory(Arc::clone(&counter)),
+        );
 
         let h_a1 = pool
             .get_or_create_named("session-a", "server-a")
@@ -674,11 +695,23 @@ mod tests {
         );
 
         // Re-fetch by name — must get same IDs back.
-        let h_a2 = pool.get_by_name("session-a").await.expect("resume session-a");
-        let h_b2 = pool.get_by_name("session-b").await.expect("resume session-b");
+        let h_a2 = pool
+            .get_by_name("session-a")
+            .await
+            .expect("resume session-a");
+        let h_b2 = pool
+            .get_by_name("session-b")
+            .await
+            .expect("resume session-b");
 
-        assert_eq!(h_a1.session_id, h_a2.session_id, "session-a must be stable across get_by_name");
-        assert_eq!(h_b1.session_id, h_b2.session_id, "session-b must be stable across get_by_name");
+        assert_eq!(
+            h_a1.session_id, h_a2.session_id,
+            "session-a must be stable across get_by_name"
+        );
+        assert_eq!(
+            h_b1.session_id, h_b2.session_id,
+            "session-b must be stable across get_by_name"
+        );
         // Factory called exactly twice (one per server).
         assert_eq!(counter.load(Ordering::Relaxed), 2);
     }
@@ -687,7 +720,10 @@ mod tests {
     #[tokio::test]
     async fn test_BC_1_03_002_session_not_found() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+        let pool = SessionPool::new(
+            PoolConfig::default(),
+            counting_factory(Arc::clone(&counter)),
+        );
 
         let result = pool.get_by_name("does-not-exist").await;
         assert!(
@@ -711,14 +747,20 @@ mod tests {
     #[tokio::test]
     async fn test_close_named_session_not_retrievable() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+        let pool = SessionPool::new(
+            PoolConfig::default(),
+            counting_factory(Arc::clone(&counter)),
+        );
 
         pool.get_or_create_named("to-close", "some-server")
             .await
             .expect("create");
 
         let removed = pool.remove_named("to-close").await;
-        assert!(removed, "remove_named must return true for existing session");
+        assert!(
+            removed,
+            "remove_named must return true for existing session"
+        );
 
         // Subsequent lookup must fail.
         let result = pool.get_by_name("to-close").await;
@@ -736,17 +778,30 @@ mod tests {
     #[tokio::test]
     async fn test_BC_1_03_002_session_list_json() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+        let pool = SessionPool::new(
+            PoolConfig::default(),
+            counting_factory(Arc::clone(&counter)),
+        );
 
         // Start with empty list.
         assert_eq!(pool.list_named().await.len(), 0);
 
-        pool.get_or_create_named("alpha", "srv-alpha").await.expect("alpha");
-        pool.get_or_create_named("beta", "srv-beta").await.expect("beta");
-        pool.get_or_create_named("gamma", "srv-gamma").await.expect("gamma");
+        pool.get_or_create_named("alpha", "srv-alpha")
+            .await
+            .expect("alpha");
+        pool.get_or_create_named("beta", "srv-beta")
+            .await
+            .expect("beta");
+        pool.get_or_create_named("gamma", "srv-gamma")
+            .await
+            .expect("gamma");
 
         let sessions = pool.list_named().await;
-        assert_eq!(sessions.len(), 3, "list must show all active named sessions");
+        assert_eq!(
+            sessions.len(),
+            3,
+            "list must show all active named sessions"
+        );
 
         let names: Vec<&str> = sessions.iter().map(|s| s.name.as_str()).collect();
         assert!(names.contains(&"alpha"), "list must include alpha");
@@ -765,7 +820,10 @@ mod tests {
     #[tokio::test]
     async fn test_named_session_overwrite_on_duplicate_name() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let pool = SessionPool::new(PoolConfig::default(), counting_factory(Arc::clone(&counter)));
+        let pool = SessionPool::new(
+            PoolConfig::default(),
+            counting_factory(Arc::clone(&counter)),
+        );
 
         // Create "my-session" pointing at server-a.
         pool.get_or_create_named("my-session", "server-a")
@@ -780,6 +838,9 @@ mod tests {
         // Now list should show only 1 session.
         let sessions = pool.list_named().await;
         assert_eq!(sessions.len(), 1, "overwrite must not duplicate the name");
-        assert_eq!(sessions[0].server_name, "server-b", "overwritten session must point to new server");
+        assert_eq!(
+            sessions[0].server_name, "server-b",
+            "overwritten session must point to new server"
+        );
     }
 }

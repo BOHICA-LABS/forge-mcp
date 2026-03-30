@@ -7,10 +7,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use forge_discovery::{
-    ConfigScope, DiscoveryError, EditorKind, Os, discover_configs,
-};
 use forge_discovery::paths::os_paths;
+use forge_discovery::{ConfigScope, DiscoveryError, EditorKind, Os, discover_configs};
 use tempfile::TempDir;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -45,8 +43,7 @@ impl FakeHome {
 #[test]
 fn test_bc_1_01_001_discovered_config_struct_shape() {
     let home = FakeHome::new();
-    let configs =
-        discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
+    let configs = discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
 
     // Must return entries (at least the 4 global ones)
     assert!(!configs.is_empty(), "should return at least one entry");
@@ -73,8 +70,7 @@ fn test_bc_1_01_001_discovered_config_struct_shape() {
 #[test]
 fn test_bc_1_01_001_all_paths_probed_macos() {
     let home = FakeHome::new();
-    let configs =
-        discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
+    let configs = discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
 
     // Without a project root: Claude Desktop + Cursor global + VS Code global + Windsurf = 4
     assert_eq!(
@@ -95,12 +91,7 @@ fn test_bc_1_01_001_all_paths_probed_macos() {
 fn test_bc_1_01_001_all_paths_probed_macos_with_project() {
     let home = FakeHome::new();
     let project = TempDir::new().unwrap();
-    let configs = discover_configs(
-        Os::MacOs,
-        Some(home.path()),
-        Some(project.path()),
-    )
-    .unwrap();
+    let configs = discover_configs(Os::MacOs, Some(home.path()), Some(project.path())).unwrap();
 
     // Global (4) + Cursor project + VS Code workspace = 6
     assert_eq!(
@@ -119,12 +110,7 @@ fn test_bc_1_01_001_project_scoped_resolution() {
     let project = TempDir::new().unwrap();
     let project_root = project.path();
 
-    let configs = discover_configs(
-        Os::MacOs,
-        Some(home.path()),
-        Some(project_root),
-    )
-    .unwrap();
+    let configs = discover_configs(Os::MacOs, Some(home.path()), Some(project_root)).unwrap();
 
     let cursor_project = configs
         .iter()
@@ -151,14 +137,11 @@ fn test_bc_1_01_001_project_scoped_resolution() {
 #[test]
 fn test_bc_1_01_001_no_project_scoped_when_root_none() {
     let home = FakeHome::new();
-    let configs =
-        discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
+    let configs = discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
 
     let project_scoped: Vec<_> = configs
         .iter()
-        .filter(|c| {
-            c.scope == ConfigScope::Project || c.scope == ConfigScope::Workspace
-        })
+        .filter(|c| c.scope == ConfigScope::Project || c.scope == ConfigScope::Workspace)
         .collect();
 
     assert!(
@@ -176,18 +159,8 @@ fn test_bc_1_01_001_deterministic_order() {
     let home = FakeHome::new();
     let project = TempDir::new().unwrap();
 
-    let run1 = discover_configs(
-        Os::MacOs,
-        Some(home.path()),
-        Some(project.path()),
-    )
-    .unwrap();
-    let run2 = discover_configs(
-        Os::MacOs,
-        Some(home.path()),
-        Some(project.path()),
-    )
-    .unwrap();
+    let run1 = discover_configs(Os::MacOs, Some(home.path()), Some(project.path())).unwrap();
+    let run2 = discover_configs(Os::MacOs, Some(home.path()), Some(project.path())).unwrap();
 
     // Identical across two runs
     let paths1: Vec<_> = run1.iter().map(|c| &c.path).collect();
@@ -228,21 +201,13 @@ fn test_bc_1_01_001_no_filesystem_writes() {
     let home = FakeHome::new();
     let project = TempDir::new().unwrap();
 
-    let count_entries = |dir: &Path| -> usize {
-        walkdir_count(dir)
-    };
+    let count_entries = |dir: &Path| -> usize { walkdir_count(dir) };
 
-    let before = count_entries(home.path())
-        + count_entries(project.path());
+    let before = count_entries(home.path()) + count_entries(project.path());
 
-    let _ = discover_configs(
-        Os::MacOs,
-        Some(home.path()),
-        Some(project.path()),
-    );
+    let _ = discover_configs(Os::MacOs, Some(home.path()), Some(project.path()));
 
-    let after = count_entries(home.path())
-        + count_entries(project.path());
+    let after = count_entries(home.path()) + count_entries(project.path());
 
     assert_eq!(
         before, after,
@@ -272,12 +237,7 @@ fn test_bc_1_01_001_no_configs_exist() {
     let home = FakeHome::new();
     let project = TempDir::new().unwrap();
 
-    let configs = discover_configs(
-        Os::MacOs,
-        Some(home.path()),
-        Some(project.path()),
-    )
-    .unwrap(); // must not Err
+    let configs = discover_configs(Os::MacOs, Some(home.path()), Some(project.path())).unwrap(); // must not Err
 
     let existing: Vec<_> = configs.iter().filter(|c| c.exists).collect();
     assert!(
@@ -294,19 +254,19 @@ fn test_bc_1_01_001_existing_file_detected() {
     let home = FakeHome::new();
 
     // Create the Claude Desktop config
-    home.create_file(
-        "Library/Application Support/Claude/claude_desktop_config.json",
-    );
+    home.create_file("Library/Application Support/Claude/claude_desktop_config.json");
 
-    let configs =
-        discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
+    let configs = discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
 
     let claude = configs
         .iter()
         .find(|c| c.editor == EditorKind::ClaudeDesktop)
         .unwrap();
 
-    assert!(claude.exists, "should detect existing Claude Desktop config");
+    assert!(
+        claude.exists,
+        "should detect existing Claude Desktop config"
+    );
     assert!(
         claude.access_error.is_none(),
         "no access_error for readable file"
@@ -330,8 +290,7 @@ fn test_bc_1_01_001_permission_denied_continues() {
     let path = home.path().join(rel);
     fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).unwrap();
 
-    let configs =
-        discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
+    let configs = discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
 
     // Restore so TempDir cleanup works
     let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o644));
@@ -402,17 +361,22 @@ fn test_bc_1_01_001_symlink_followed() {
     let symlink_path = symlink_dir.join("claude_desktop_config.json");
     symlink(&real_file, &symlink_path).unwrap();
 
-    let configs =
-        discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
+    let configs = discover_configs(Os::MacOs, Some(home.path()), None).unwrap();
 
     let claude = configs
         .iter()
         .find(|c| c.editor == EditorKind::ClaudeDesktop)
         .unwrap();
 
-    assert!(claude.exists, "symlinked config must be detected as existing");
+    assert!(
+        claude.exists,
+        "symlinked config must be detected as existing"
+    );
     // The reported path is the symlink path, not the resolved target.
-    assert_eq!(claude.path, symlink_path, "path must be the symlink location");
+    assert_eq!(
+        claude.path, symlink_path,
+        "path must be the symlink location"
+    );
     assert!(
         claude.access_error.is_none(),
         "no access_error for readable symlink"
@@ -442,10 +406,7 @@ fn test_bc_1_01_001_macos_path_correctness() {
         .iter()
         .find(|(e, s, _)| *e == EditorKind::Cursor && *s == ConfigScope::Global)
         .expect("Cursor global must exist");
-    assert_eq!(
-        cursor.2,
-        PathBuf::from("/Users/testuser/.cursor/mcp.json")
-    );
+    assert_eq!(cursor.2, PathBuf::from("/Users/testuser/.cursor/mcp.json"));
 
     let vscode = entries
         .iter()
@@ -453,9 +414,7 @@ fn test_bc_1_01_001_macos_path_correctness() {
         .expect("VS Code global must exist");
     assert_eq!(
         vscode.2,
-        PathBuf::from(
-            "/Users/testuser/Library/Application Support/Code/User/mcp.json"
-        )
+        PathBuf::from("/Users/testuser/Library/Application Support/Code/User/mcp.json")
     );
 
     let windsurf = entries

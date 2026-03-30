@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use forge_core::{connect_stdio, CoreError, PromptCache, get_prompt, list_prompts_all};
+use forge_core::{CoreError, PromptCache, connect_stdio, get_prompt, list_prompts_all};
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -39,7 +39,11 @@ fn test_server_bin() -> String {
         .and_then(|p| p.parent())
         .expect("expected workspace root");
     let target_dir = workspace_root.join("target");
-    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
+    let bin_name = if cfg!(windows) {
+        "forge-test-server.exe"
+    } else {
+        "forge-test-server"
+    };
 
     // Check target-triple subdirectories first (CI with --target <triple>).
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
@@ -109,13 +113,21 @@ async fn test_BC_2_05_003_list_prompts_paginated() {
         .await
         .expect("connect should succeed");
 
-    assert!(conn.supports_prompts(), "server must advertise prompts capability");
+    assert!(
+        conn.supports_prompts(),
+        "server must advertise prompts capability"
+    );
 
     let prompts = list_prompts_all(&conn, None)
         .await
         .expect("list_prompts_all should succeed");
 
-    assert_eq!(prompts.len(), 5, "expected 5 prompts across all pages, got {}", prompts.len());
+    assert_eq!(
+        prompts.len(),
+        5,
+        "expected 5 prompts across all pages, got {}",
+        prompts.len()
+    );
 
     // Verify names are collected in order.
     let names: Vec<&str> = prompts.iter().map(|p| p.name.as_str()).collect();
@@ -176,7 +188,10 @@ async fn test_BC_2_05_003_list_prompts_uses_cache() {
         .await
         .expect("second call should succeed");
     assert_eq!(prompts2.len(), 1);
-    assert_eq!(prompts1[0].name, prompts2[0].name, "cached result must match");
+    assert_eq!(
+        prompts1[0].name, prompts2[0].name,
+        "cached result must match"
+    );
 
     conn.shutdown().await.ok();
 }
@@ -241,7 +256,10 @@ async fn test_BC_2_05_003_get_prompt_with_args() {
 
     // Call get_prompt with arguments (arguments are passed as-is; mock ignores them).
     let mut arguments = HashMap::new();
-    arguments.insert("user".to_string(), serde_json::Value::String("Alice".to_string()));
+    arguments.insert(
+        "user".to_string(),
+        serde_json::Value::String("Alice".to_string()),
+    );
     let result_with_args = get_prompt(&conn, "greeting", Some(arguments))
         .await
         .expect("get_prompt with args should succeed");
@@ -296,7 +314,10 @@ async fn test_BC_2_05_003_conn_get_prompt_method() {
         .await
         .expect("conn.get_prompt should succeed");
 
-    assert!(!result.messages.is_empty(), "must have at least one message");
+    assert!(
+        !result.messages.is_empty(),
+        "must have at least one message"
+    );
 
     conn.shutdown().await.ok();
 }
@@ -338,7 +359,10 @@ async fn test_BC_2_05_003_capability_guard() {
         .await
         .expect("connect should succeed even with no capabilities");
 
-    assert!(!conn.supports_prompts(), "server must NOT advertise prompts");
+    assert!(
+        !conn.supports_prompts(),
+        "server must NOT advertise prompts"
+    );
 
     // list_prompts_all must fail with E-PRO-003 (no I/O attempted).
     let list_result = list_prompts_all(&conn, None).await;
@@ -432,7 +456,10 @@ async fn test_BC_2_05_003_list_changed_invalidates_cache() {
     cache.invalidate();
 
     // Cache must now be invalid.
-    assert!(!cache.is_valid(), "cache must be invalid after list_changed");
+    assert!(
+        !cache.is_valid(),
+        "cache must be invalid after list_changed"
+    );
     assert!(
         cache.get().is_none(),
         "cache.get() must return None after list_changed"
@@ -443,7 +470,8 @@ async fn test_BC_2_05_003_list_changed_invalidates_cache() {
         .await
         .expect("re-fetch after invalidation should succeed");
     assert_eq!(
-        prompts_after.len(), 1,
+        prompts_after.len(),
+        1,
         "re-fetched prompt list must have same count"
     );
     assert!(cache.is_valid(), "cache must be valid again after re-fetch");

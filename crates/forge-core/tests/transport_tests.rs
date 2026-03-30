@@ -13,7 +13,9 @@
 
 use std::collections::HashMap;
 
-use forge_core::{ConnectionState, ForgeError, TransportKind, connect_stdio, connect_stdio_with_timeout};
+use forge_core::{
+    ConnectionState, ForgeError, TransportKind, connect_stdio, connect_stdio_with_timeout,
+};
 
 // ── Helper: path to the forge-test-server binary ─────────────────────────────
 
@@ -41,11 +43,15 @@ fn test_server_bin() -> String {
         .expect("CARGO_MANIFEST_DIR must be set in test environment");
     // Traverse up to workspace root, then down to target/debug.
     let workspace_root = std::path::Path::new(&manifest_dir)
-        .parent()  // crates/
+        .parent() // crates/
         .and_then(|p| p.parent()) // workspace root
         .expect("expected workspace root");
     let target_dir = workspace_root.join("target");
-    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
+    let bin_name = if cfg!(windows) {
+        "forge-test-server.exe"
+    } else {
+        "forge-test-server"
+    };
 
     // Check target-triple subdirectories first (CI with --target <triple>).
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
@@ -71,8 +77,12 @@ fn test_server_bin() -> String {
 #[tokio::test]
 async fn test_BC_1_02_001_stdio_connect_success() {
     let bin = test_server_bin();
-    let args = vec!["--tools".to_string(), "3".to_string(),
-                    "--resources".to_string(), "2".to_string()];
+    let args = vec![
+        "--tools".to_string(),
+        "3".to_string(),
+        "--resources".to_string(),
+        "2".to_string(),
+    ];
     let env = HashMap::new();
 
     let conn = connect_stdio(&bin, &args, &env)
@@ -86,20 +96,34 @@ async fn test_BC_1_02_001_stdio_connect_success() {
     assert_eq!(conn.transport_kind(), &TransportKind::Stdio);
 
     // Server name must come back from the initialize handshake.
-    assert_eq!(conn.server_name(), "forge-test-server",
-        "expected server_name from initialize result");
+    assert_eq!(
+        conn.server_name(),
+        "forge-test-server",
+        "expected server_name from initialize result"
+    );
     assert_eq!(conn.server_version(), "0.1.0");
 
     // Capabilities must be available — use the negotiated capability accessors.
-    assert!(conn.supports_tools(), "server should advertise tools capability");
-    assert!(conn.supports_resources(), "server should advertise resources capability");
+    assert!(
+        conn.supports_tools(),
+        "server should advertise tools capability"
+    );
+    assert!(
+        conn.supports_resources(),
+        "server should advertise resources capability"
+    );
 
     // Peer must be available.
     assert!(conn.peer().is_some(), "peer handle must be available");
-    assert!(!conn.is_closed(), "connection should not be closed immediately");
+    assert!(
+        !conn.is_closed(),
+        "connection should not be closed immediately"
+    );
 
     // Clean shutdown.
-    conn.shutdown().await.expect("clean shutdown should succeed");
+    conn.shutdown()
+        .await
+        .expect("clean shutdown should succeed");
 }
 
 // ── AC-002: Env var expansion ─────────────────────────────────────────────────
@@ -152,8 +176,11 @@ async fn test_BC_1_02_001_process_exit_detected() {
         .await
         .expect("connect_stdio should succeed — crash happens after init");
 
-    assert_eq!(conn.state(), &ConnectionState::Connected,
-        "state should be Connected after init, before crash");
+    assert_eq!(
+        conn.state(),
+        &ConnectionState::Connected,
+        "state should be Connected after init, before crash"
+    );
 
     // Trigger the crash by calling a tool.
     let peer = conn.peer().expect("peer must be available");
@@ -228,5 +255,7 @@ async fn test_clean_shutdown() {
         .expect("connection should succeed");
 
     assert_eq!(conn.state(), &ConnectionState::Connected);
-    conn.shutdown().await.expect("shutdown should complete without error");
+    conn.shutdown()
+        .await
+        .expect("shutdown should complete without error");
 }

@@ -45,8 +45,7 @@ pub fn discover_configs(
     let home: &Path = match home {
         Some(h) => h,
         None => {
-            home_buf =
-                dirs::home_dir().ok_or(DiscoveryError::HomeDirectoryMissing)?;
+            home_buf = dirs::home_dir().ok_or(DiscoveryError::HomeDirectoryMissing)?;
             &home_buf
         }
     };

@@ -131,15 +131,11 @@ fn extract_headers(raw: HashMap<String, Value>) -> HashMap<String, String> {
 ///
 /// # Purity
 /// This function performs no I/O.  It is pure: same input → same output.
-pub fn parse_config(
-    discovered: &ParseInput,
-) -> Result<Vec<ServerEntry>, ConfigError> {
+pub fn parse_config(discovered: &ParseInput) -> Result<Vec<ServerEntry>, ConfigError> {
     let root: Value =
-        serde_json::from_str(&discovered.content).map_err(|e| {
-            ConfigError::JsonParseError {
-                path: discovered.path.clone(),
-                source: e,
-            }
+        serde_json::from_str(&discovered.content).map_err(|e| ConfigError::JsonParseError {
+            path: discovered.path.clone(),
+            source: e,
         })?;
 
     // Auto-detect schema: try `mcpServers` first, then `servers`.
@@ -172,11 +168,9 @@ fn parse_mcp_servers_schema(
 
     for (name, raw_val) in obj {
         let raw: RawMcpServer =
-            serde_json::from_value(raw_val.clone()).map_err(|e| {
-                ConfigError::JsonParseError {
-                    path: input.path.clone(),
-                    source: e,
-                }
+            serde_json::from_value(raw_val.clone()).map_err(|e| ConfigError::JsonParseError {
+                path: input.path.clone(),
+                source: e,
             })?;
 
         // AC-006: env values stored as-is (not expanded). Non-string → E-CFG-007.
@@ -194,10 +188,7 @@ fn parse_mcp_servers_schema(
                 }),
             )
         } else {
-            let url = raw
-                .url
-                .or(raw.server_url)
-                .unwrap_or_default();
+            let url = raw.url.or(raw.server_url).unwrap_or_default();
             let headers = extract_headers(raw.headers);
             (
                 Transport::Http,
@@ -236,11 +227,9 @@ fn parse_servers_schema(
 
     for (name, raw_val) in obj {
         let raw: RawVsCodeServer =
-            serde_json::from_value(raw_val.clone()).map_err(|e| {
-                ConfigError::JsonParseError {
-                    path: input.path.clone(),
-                    source: e,
-                }
+            serde_json::from_value(raw_val.clone()).map_err(|e| ConfigError::JsonParseError {
+                path: input.path.clone(),
+                source: e,
             })?;
 
         let env = extract_env(raw.env, &input.path, name)?;

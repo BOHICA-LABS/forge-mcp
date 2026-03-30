@@ -65,7 +65,11 @@ pub fn os_paths(
             .join("Claude")
             .join("claude_desktop_config.json"),
     };
-    entries.push((EditorKind::ClaudeDesktop, ConfigScope::Global, claude_global));
+    entries.push((
+        EditorKind::ClaudeDesktop,
+        ConfigScope::Global,
+        claude_global,
+    ));
 
     // ── Cursor global ─────────────────────────────────────────────────────────
     let cursor_global = match os {
@@ -97,7 +101,11 @@ pub fn os_paths(
             .join("Code")
             .join("User")
             .join("mcp.json"),
-        Os::Linux => home.join(".config").join("Code").join("User").join("mcp.json"),
+        Os::Linux => home
+            .join(".config")
+            .join("Code")
+            .join("User")
+            .join("mcp.json"),
     };
     entries.push((EditorKind::VSCode, ConfigScope::Global, vscode_global));
 
@@ -130,9 +138,7 @@ pub fn os_paths(
 /// (all `exists = false`, no `access_error`).
 ///
 /// The caller (`discover_configs`) is responsible for probing the filesystem.
-pub fn make_stubs(
-    entries: Vec<(EditorKind, ConfigScope, PathBuf)>,
-) -> Vec<DiscoveredConfig> {
+pub fn make_stubs(entries: Vec<(EditorKind, ConfigScope, PathBuf)>) -> Vec<DiscoveredConfig> {
     entries
         .into_iter()
         .map(|(editor, scope, path)| DiscoveredConfig {

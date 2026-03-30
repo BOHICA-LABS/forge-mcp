@@ -81,9 +81,7 @@ const MAX_PAGES: usize = 10_000;
 ///
 /// - `E-PRO-003` — server did not advertise the `resources` capability.
 /// - `E-PRO-001` — any underlying rmcp / JSON-RPC error.
-pub async fn list_resources<H: ClientHandler>(
-    conn: &McpConnection<H>,
-) -> Result<Vec<Resource>> {
+pub async fn list_resources<H: ClientHandler>(conn: &McpConnection<H>) -> Result<Vec<Resource>> {
     if !conn.supports_resources() {
         return Err(CoreError::CapabilityNotSupported {
             method: "resources/list".to_string(),
@@ -161,11 +159,10 @@ pub async fn read_resource<H: ClientHandler>(
         .map_err(|e| CoreError::Protocol(e.to_string()))?;
 
     // Use the first content item; real-world servers nearly always return one.
-    let first = result
-        .contents
-        .into_iter()
-        .next()
-        .ok_or_else(|| CoreError::Protocol("read_resource returned empty contents".to_string()))?;
+    let first =
+        result.contents.into_iter().next().ok_or_else(|| {
+            CoreError::Protocol("read_resource returned empty contents".to_string())
+        })?;
 
     match first {
         ResourceContents::TextResourceContents {

@@ -63,7 +63,9 @@ async fn test_BC_1_02_002_http_connect_success() {
     );
 
     // Server info must be populated (handshake completed)
-    let info = conn.server_info().expect("server_info should be set after handshake");
+    let info = conn
+        .server_info()
+        .expect("server_info should be set after handshake");
     assert!(
         !info.server_info.name.is_empty(),
         "server name should be non-empty; got: {:?}",
@@ -116,7 +118,10 @@ async fn test_BC_1_02_002_custom_headers_sent() {
     let (url, ct) = spawn_default_server().await;
 
     let mut headers = HashMap::new();
-    headers.insert("X-Custom-Header".to_string(), "forge-test-value".to_string());
+    headers.insert(
+        "X-Custom-Header".to_string(),
+        "forge-test-value".to_string(),
+    );
     headers.insert("X-Request-Id".to_string(), "test-123".to_string());
 
     let conn = connect_http(&url, &headers)
@@ -124,7 +129,10 @@ async fn test_BC_1_02_002_custom_headers_sent() {
         .expect("connect_http with custom headers should succeed");
 
     // If connection succeeds, headers were forwarded without breaking the protocol
-    assert_eq!(*conn.state(), forge_core::connection::ConnectionState::Connected);
+    assert_eq!(
+        *conn.state(),
+        forge_core::connection::ConnectionState::Connected
+    );
 
     conn.cancel();
     ct.cancel();
@@ -186,7 +194,10 @@ async fn test_BC_1_02_002_insecure_http_warning() {
         .await
         .expect("http:// connection should proceed with warning, not fail");
 
-    assert_eq!(*conn.state(), forge_core::connection::ConnectionState::Connected);
+    assert_eq!(
+        *conn.state(),
+        forge_core::connection::ConnectionState::Connected
+    );
 
     conn.cancel();
     ct.cancel();
@@ -208,7 +219,9 @@ async fn test_BC_1_02_002_connection_refused() {
     let err = result.unwrap_err();
     // Accept either ServerUnavailable or DnsResolutionFailed depending on OS
     match &err {
-        CoreError::ServerUnavailable { .. } | CoreError::DnsResolutionFailed { .. } | CoreError::Rmcp(_) => {
+        CoreError::ServerUnavailable { .. }
+        | CoreError::DnsResolutionFailed { .. }
+        | CoreError::Rmcp(_) => {
             // all acceptable — the key thing is it returned an error
         }
         other => panic!("unexpected error variant: {other:?}"),

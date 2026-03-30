@@ -82,8 +82,7 @@ pub fn aggregate_configs(sources: &[Vec<ServerEntry>]) -> ServerRegistry {
             _ => {
                 // Check whether all candidates are identical (POST-003: dedup).
                 let first = &candidates[0];
-                let all_identical =
-                    candidates[1..].iter().all(|c| configs_equal(first, c));
+                let all_identical = candidates[1..].iter().all(|c| configs_equal(first, c));
 
                 if all_identical {
                     // POST-003: deduplicated identical entries — first source wins,
@@ -147,9 +146,7 @@ fn configs_equal(a: &ServerEntry, b: &ServerEntry) -> bool {
 mod tests {
     use std::path::PathBuf;
 
-    use forge_core::types::{
-        EditorKind, ServerEntry, StdioConfig, Transport, TransportConfig,
-    };
+    use forge_core::types::{EditorKind, ServerEntry, StdioConfig, Transport, TransportConfig};
 
     use super::*;
 
@@ -177,12 +174,7 @@ mod tests {
         }
     }
 
-    fn http_entry(
-        name: &str,
-        url: &str,
-        editor: EditorKind,
-        path: &str,
-    ) -> ServerEntry {
+    fn http_entry(name: &str, url: &str, editor: EditorKind, path: &str) -> ServerEntry {
         use forge_core::types::{HttpConfig, Transport, TransportConfig};
         ServerEntry {
             name: name.to_owned(),
@@ -310,7 +302,10 @@ mod tests {
 
         // Winner must be the project-local entry.
         let winner = registry.servers.get("lint").expect("lint must be present");
-        assert_eq!(winner.source_path, PathBuf::from("/my-project/.cursor/mcp.json"));
+        assert_eq!(
+            winner.source_path,
+            PathBuf::from("/my-project/.cursor/mcp.json")
+        );
 
         // Different commands → conflict recorded.
         assert_eq!(registry.conflicts.len(), 1);
@@ -343,7 +338,11 @@ mod tests {
 
         let registry = aggregate_configs(&[claude, cursor, vscode]);
 
-        assert_eq!(registry.servers.len(), 3, "all three servers must be present");
+        assert_eq!(
+            registry.servers.len(),
+            3,
+            "all three servers must be present"
+        );
         assert!(registry.conflicts.is_empty(), "no conflicts expected");
         assert!(registry.servers.contains_key("server-a"));
         assert!(registry.servers.contains_key("server-b"));
@@ -372,8 +371,15 @@ mod tests {
 
         let registry = aggregate_configs(&[source]);
 
-        assert_eq!(registry.servers.len(), 2, "disabled server must be included");
-        let inactive = registry.servers.get("inactive").expect("inactive must be present");
+        assert_eq!(
+            registry.servers.len(),
+            2,
+            "disabled server must be included"
+        );
+        let inactive = registry
+            .servers
+            .get("inactive")
+            .expect("inactive must be present");
         assert!(!inactive.enabled, "server must remain disabled");
         assert!(registry.conflicts.is_empty());
     }
@@ -400,7 +406,10 @@ mod tests {
         let registry = aggregate_configs(&[source_a, source_b]);
 
         assert_eq!(registry.servers.len(), 1);
-        assert!(registry.conflicts.is_empty(), "identical entries must not create a conflict");
+        assert!(
+            registry.conflicts.is_empty(),
+            "identical entries must not create a conflict"
+        );
         // Winner should be from first source (ClaudeDesktop).
         let winner = registry.servers.get("server-a").expect("must be present");
         assert_eq!(winner.source_editor, EditorKind::ClaudeDesktop);

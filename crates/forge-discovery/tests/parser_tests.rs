@@ -6,24 +6,40 @@
 use std::path::PathBuf;
 
 use forge_core::types::{EditorKind, Transport, TransportConfig};
-use forge_discovery::{parse_config, ConfigError, EditorKind as DiscoveryEditorKind, ParseInput};
+use forge_discovery::{ConfigError, EditorKind as DiscoveryEditorKind, ParseInput, parse_config};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn claude_input(json: &str) -> ParseInput {
-    ParseInput::new(json, "/home/user/.config/Claude/claude_desktop_config.json", DiscoveryEditorKind::ClaudeDesktop)
+    ParseInput::new(
+        json,
+        "/home/user/.config/Claude/claude_desktop_config.json",
+        DiscoveryEditorKind::ClaudeDesktop,
+    )
 }
 
 fn cursor_input(json: &str) -> ParseInput {
-    ParseInput::new(json, "/home/user/.cursor/mcp.json", DiscoveryEditorKind::Cursor)
+    ParseInput::new(
+        json,
+        "/home/user/.cursor/mcp.json",
+        DiscoveryEditorKind::Cursor,
+    )
 }
 
 fn vscode_input(json: &str) -> ParseInput {
-    ParseInput::new(json, "/home/user/.config/Code/User/mcp.json", DiscoveryEditorKind::VSCode)
+    ParseInput::new(
+        json,
+        "/home/user/.config/Code/User/mcp.json",
+        DiscoveryEditorKind::VSCode,
+    )
 }
 
 fn windsurf_input(json: &str) -> ParseInput {
-    ParseInput::new(json, "/home/user/.codeium/windsurf/mcp_config.json", DiscoveryEditorKind::Windsurf)
+    ParseInput::new(
+        json,
+        "/home/user/.codeium/windsurf/mcp_config.json",
+        DiscoveryEditorKind::Windsurf,
+    )
 }
 
 // ── AC-001: mcpServers schema — Stdio transport ───────────────────────────────
@@ -57,7 +73,10 @@ fn test_bc_1_01_002_mcp_servers_schema_stdio() {
         TransportConfig::Stdio(cfg) => {
             assert_eq!(cfg.command, "npx");
             assert_eq!(cfg.args, vec!["-y", "@modelcontextprotocol/server-github"]);
-            assert_eq!(cfg.env.get("GITHUB_TOKEN").map(|s| s.as_str()), Some("ghp_secret"));
+            assert_eq!(
+                cfg.env.get("GITHUB_TOKEN").map(|s| s.as_str()),
+                Some("ghp_secret")
+            );
         }
         other => panic!("expected Stdio, got {other:?}"),
     }
@@ -210,7 +229,10 @@ fn test_bc_1_01_002_disabled_maps_to_enabled_false() {
     let entries = parse_config(&cursor_input(json)).unwrap();
     assert_eq!(entries.len(), 2);
 
-    let disabled = entries.iter().find(|e| e.name == "disabled-server").unwrap();
+    let disabled = entries
+        .iter()
+        .find(|e| e.name == "disabled-server")
+        .unwrap();
     assert!(!disabled.enabled, "disabled=true must map to enabled=false");
 
     let active = entries.iter().find(|e| e.name == "active-server").unwrap();
@@ -227,7 +249,11 @@ fn test_bc_1_01_002_disabled_server_still_in_registry() {
     }"#;
 
     let entries = parse_config(&cursor_input(json)).unwrap();
-    assert_eq!(entries.len(), 1, "disabled server must still appear in registry");
+    assert_eq!(
+        entries.len(),
+        1,
+        "disabled server must still appear in registry"
+    );
     assert!(!entries[0].enabled);
 }
 
@@ -280,7 +306,10 @@ fn test_bc_1_01_002_env_not_expanded() {
     // Values must be stored verbatim — no expansion
     assert_eq!(env.get("API_KEY").map(|s| s.as_str()), Some("${MY_SECRET}"));
     assert_eq!(env.get("HOME").map(|s| s.as_str()), Some("$HOME"));
-    assert_eq!(env.get("LITERAL").map(|s| s.as_str()), Some("just-a-string"));
+    assert_eq!(
+        env.get("LITERAL").map(|s| s.as_str()),
+        Some("just-a-string")
+    );
 }
 
 // ── AC-007: invalid JSON → E-CFG-003 ─────────────────────────────────────────
@@ -292,7 +321,7 @@ fn test_bc_1_01_002_invalid_json_errors() {
         r#"{ this is not json }"#,
         r#"{"mcpServers": {unclosed"#,
         r#""#,
-        r#"null"#,  // null is valid JSON but has no keys
+        r#"null"#, // null is valid JSON but has no keys
     ];
 
     // First two must be JsonParseError; last two handled separately
@@ -301,10 +330,13 @@ fn test_bc_1_01_002_invalid_json_errors() {
         assert!(result.is_err(), "expected error for: {bad}");
         match result.unwrap_err() {
             ConfigError::JsonParseError { path, .. } => {
-                let msg = format!("{}", ConfigError::JsonParseError {
-                    path: path.clone(),
-                    source: serde_json::from_str::<serde_json::Value>("bad").unwrap_err(),
-                });
+                let msg = format!(
+                    "{}",
+                    ConfigError::JsonParseError {
+                        path: path.clone(),
+                        source: serde_json::from_str::<serde_json::Value>("bad").unwrap_err(),
+                    }
+                );
                 assert!(
                     msg.contains("E-CFG-003"),
                     "error message must contain E-CFG-003"
@@ -328,7 +360,10 @@ fn test_bc_1_01_002_invalid_json_error_message_contains_code() {
     let result = parse_config(&claude_input("{bad}"));
     let err = result.unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("E-CFG-003"), "error must contain E-CFG-003, got: {msg}");
+    assert!(
+        msg.contains("E-CFG-003"),
+        "error must contain E-CFG-003, got: {msg}"
+    );
 }
 
 // ── AC-008: no recognized schema → E-CFG-004, continue ───────────────────────
@@ -343,7 +378,10 @@ fn test_bc_1_01_002_no_recognized_schema_continues() {
         Err(ConfigError::NoRecognizedSchema { path }) => {
             let err = ConfigError::NoRecognizedSchema { path };
             let msg = err.to_string();
-            assert!(msg.contains("E-CFG-004"), "must contain E-CFG-004, got: {msg}");
+            assert!(
+                msg.contains("E-CFG-004"),
+                "must contain E-CFG-004, got: {msg}"
+            );
         }
         Ok(_) => panic!("expected NoRecognizedSchema error"),
         Err(other) => panic!("expected NoRecognizedSchema, got {other:?}"),
@@ -429,7 +467,10 @@ fn test_bc_1_01_002_env_non_string_per_entry_error() {
                 key: "BAD_KEY".to_owned(),
             };
             let msg = err.to_string();
-            assert!(msg.contains("E-CFG-007"), "must contain E-CFG-007, got: {msg}");
+            assert!(
+                msg.contains("E-CFG-007"),
+                "must contain E-CFG-007, got: {msg}"
+            );
         }
         Ok(_) => panic!("expected EnvValueNotString error"),
         Err(other) => panic!("expected EnvValueNotString, got {other:?}"),
@@ -449,12 +490,10 @@ fn test_bc_1_01_002_env_bool_value_error() {
         }
     }"#;
 
-    assert!(
-        matches!(
-            parse_config(&claude_input(json)),
-            Err(ConfigError::EnvValueNotString { .. })
-        )
-    );
+    assert!(matches!(
+        parse_config(&claude_input(json)),
+        Err(ConfigError::EnvValueNotString { .. })
+    ));
 }
 
 /// AC-010: null env value also triggers E-CFG-007.
@@ -470,12 +509,10 @@ fn test_bc_1_01_002_env_null_value_error() {
         }
     }"#;
 
-    assert!(
-        matches!(
-            parse_config(&claude_input(json)),
-            Err(ConfigError::EnvValueNotString { .. })
-        )
-    );
+    assert!(matches!(
+        parse_config(&claude_input(json)),
+        Err(ConfigError::EnvValueNotString { .. })
+    ));
 }
 
 // ── Additional coverage ───────────────────────────────────────────────────────
@@ -512,7 +549,12 @@ fn test_bc_1_01_002_cursor_global_full_example() {
 
     match &github.config {
         TransportConfig::Stdio(cfg) => {
-            assert_eq!(cfg.env.get("GITHUB_PERSONAL_ACCESS_TOKEN").map(|s| s.as_str()), Some("ghp_abc123"));
+            assert_eq!(
+                cfg.env
+                    .get("GITHUB_PERSONAL_ACCESS_TOKEN")
+                    .map(|s| s.as_str()),
+                Some("ghp_abc123")
+            );
         }
         other => panic!("expected Stdio, got {other:?}"),
     }
@@ -539,7 +581,10 @@ fn test_bc_1_01_002_windsurf_config_parsed() {
     let entries = parse_config(&windsurf_input(json)).unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].source_editor, EditorKind::Windsurf);
-    assert_eq!(entries[0].source_path, PathBuf::from("/home/user/.codeium/windsurf/mcp_config.json"));
+    assert_eq!(
+        entries[0].source_path,
+        PathBuf::from("/home/user/.codeium/windsurf/mcp_config.json")
+    );
 }
 
 /// Multiple servers in a single config file.
@@ -592,7 +637,11 @@ fn test_bc_1_01_002_both_command_and_url_command_wins() {
     }"#;
 
     let entries = parse_config(&claude_input(json)).unwrap();
-    assert_eq!(entries[0].transport, Transport::Stdio, "command takes precedence over url in mcpServers schema");
+    assert_eq!(
+        entries[0].transport,
+        Transport::Stdio,
+        "command takes precedence over url in mcpServers schema"
+    );
 }
 
 /// Source path is preserved accurately in every entry.
@@ -635,8 +684,14 @@ fn test_bc_1_01_002_vscode_sse_with_headers() {
     match &entries[0].config {
         TransportConfig::Http(cfg) => {
             assert_eq!(cfg.url, "https://mcp.example.com/v1");
-            assert_eq!(cfg.headers.get("Authorization").map(|s| s.as_str()), Some("Bearer token123"));
-            assert_eq!(cfg.headers.get("X-Custom").map(|s| s.as_str()), Some("value"));
+            assert_eq!(
+                cfg.headers.get("Authorization").map(|s| s.as_str()),
+                Some("Bearer token123")
+            );
+            assert_eq!(
+                cfg.headers.get("X-Custom").map(|s| s.as_str()),
+                Some("value")
+            );
         }
         other => panic!("expected Http, got {other:?}"),
     }

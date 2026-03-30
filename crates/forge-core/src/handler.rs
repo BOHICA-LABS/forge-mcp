@@ -16,8 +16,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use rmcp::{
-    ClientHandler,
-    ErrorData as McpError,
+    ClientHandler, ErrorData as McpError,
     model::{
         ClientCapabilities, ClientInfo, CreateElicitationRequestParams, CreateElicitationResult,
         CreateMessageRequestParams, CreateMessageResult, ElicitationAction, ElicitationCapability,
@@ -112,7 +111,10 @@ impl ClientCapabilityConfig {
             None
         };
 
-        ClientInfo::new(caps, Implementation::new("forge-mcp", env!("CARGO_PKG_VERSION")))
+        ClientInfo::new(
+            caps,
+            Implementation::new("forge-mcp", env!("CARGO_PKG_VERSION")),
+        )
     }
 }
 
@@ -153,7 +155,11 @@ impl ForgeClientHandler {
     /// Defaults to non-interactive mode (`interactive: false`). Use
     /// [`ForgeClientHandler::with_interactive`] to enable TUI mode.
     pub fn new(config: ClientCapabilityConfig) -> Self {
-        Self { config, llm_proxy: None, interactive: false }
+        Self {
+            config,
+            llm_proxy: None,
+            interactive: false,
+        }
     }
 
     /// Create a handler with an explicit `LlmProxy`.
@@ -169,7 +175,11 @@ impl ForgeClientHandler {
 
     /// Create a handler with the given interactive mode setting.
     pub fn with_interactive(config: ClientCapabilityConfig, interactive: bool) -> Self {
-        Self { config, llm_proxy: None, interactive }
+        Self {
+            config,
+            llm_proxy: None,
+            interactive,
+        }
     }
 
     /// Build the `ClientInfo` to use during the MCP initialize handshake.
@@ -281,8 +291,7 @@ impl ClientHandler for ForgeClientHandler {
     ) -> impl std::future::Future<Output = ()> + Send + '_ {
         let level = format!("{:?}", params.level);
         let logger = params.logger.as_deref().unwrap_or("server");
-        let data = serde_json::to_string(&params.data)
-            .unwrap_or_else(|_| params.data.to_string());
+        let data = serde_json::to_string(&params.data).unwrap_or_else(|_| params.data.to_string());
         // Route to stderr (CLI mode). TUI routing will be added in a future story.
         eprintln!("[MCP LOG {level}] {logger}: {data}");
         std::future::ready(())
@@ -370,7 +379,11 @@ mod tests {
         // Call the TUI stub directly to test the form-mode routing logic.
         let result = elicitation_tui_stub(request);
 
-        assert_eq!(result.action, ElicitationAction::Accept, "form mode should Accept");
+        assert_eq!(
+            result.action,
+            ElicitationAction::Accept,
+            "form mode should Accept"
+        );
         assert!(result.content.is_some(), "form mode should return content");
         // Stub returns {"__stub": true}
         let content = result.content.unwrap();
@@ -396,7 +409,11 @@ mod tests {
 
         let result = elicitation_tui_stub(request);
 
-        assert_eq!(result.action, ElicitationAction::Accept, "URL mode should Accept");
+        assert_eq!(
+            result.action,
+            ElicitationAction::Accept,
+            "URL mode should Accept"
+        );
         assert!(result.content.is_some(), "URL mode should return content");
         let content = result.content.unwrap();
         assert_eq!(
@@ -452,8 +469,15 @@ mod tests {
     fn test_BC_2_05_005_elicitation_cancel() {
         let result = make_cancelled_result();
 
-        assert_eq!(result.action, ElicitationAction::Cancel, "cancel must set action: Cancel");
-        assert!(result.content.is_none(), "cancelled result must have no content");
+        assert_eq!(
+            result.action,
+            ElicitationAction::Cancel,
+            "cancel must set action: Cancel"
+        );
+        assert!(
+            result.content.is_none(),
+            "cancelled result must have no content"
+        );
     }
 
     // ── Existing ClientCapabilityConfig tests ────────────────────────────────
@@ -467,8 +491,14 @@ mod tests {
             root_paths: vec![],
         };
         let info = config.build_client_info();
-        assert!(info.capabilities.sampling.is_some(), "sampling should be set");
-        assert!(info.capabilities.elicitation.is_some(), "elicitation should be set");
+        assert!(
+            info.capabilities.sampling.is_some(),
+            "sampling should be set"
+        );
+        assert!(
+            info.capabilities.elicitation.is_some(),
+            "elicitation should be set"
+        );
         assert!(info.capabilities.roots.is_some(), "roots should be set");
         let roots = info.capabilities.roots.as_ref().unwrap();
         assert_eq!(roots.list_changed, Some(true), "listChanged must be true");
@@ -483,8 +513,14 @@ mod tests {
             root_paths: vec![],
         };
         let info = config.build_client_info();
-        assert!(info.capabilities.sampling.is_none(), "sampling should not be set");
-        assert!(info.capabilities.elicitation.is_none(), "elicitation should not be set");
+        assert!(
+            info.capabilities.sampling.is_none(),
+            "sampling should not be set"
+        );
+        assert!(
+            info.capabilities.elicitation.is_none(),
+            "elicitation should not be set"
+        );
         assert!(info.capabilities.roots.is_none(), "roots should not be set");
     }
 

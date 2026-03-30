@@ -99,7 +99,10 @@ async fn test_bc_5_11_002_json_stdout_diagnostics_stderr() {
     let (stdout, _stderr, status) = run_forge_mcp(&["list", &server]).await;
 
     // Exit 0 on success
-    assert!(status.success(), "expected exit 0, got: {status:?}\nstdout: {stdout}\nstderr: {_stderr}");
+    assert!(
+        status.success(),
+        "expected exit 0, got: {status:?}\nstdout: {stdout}\nstderr: {_stderr}"
+    );
 
     // stdout must be parseable JSON
     let parsed: serde_json::Value = serde_json::from_str(&stdout)
@@ -140,7 +143,10 @@ async fn test_bc_5_11_002_output_schemas() {
     // ── list <server> → { "tools": [...] }
     {
         let (stdout, _stderr, status) = run_forge_mcp(&["list", &server]).await;
-        assert!(status.success(), "list failed\nstdout: {stdout}\nstderr: {_stderr}");
+        assert!(
+            status.success(),
+            "list failed\nstdout: {stdout}\nstderr: {_stderr}"
+        );
         let v: serde_json::Value = serde_json::from_str(&stdout)
             .unwrap_or_else(|e| panic!("list stdout not JSON: {e}\n{stdout}"));
         assert!(
@@ -152,7 +158,10 @@ async fn test_bc_5_11_002_output_schemas() {
     // ── list (no server) → { "servers": [...] }
     {
         let (stdout, _stderr, status) = run_forge_mcp(&["list"]).await;
-        assert!(status.success(), "list (no server) failed\nstdout: {stdout}\nstderr: {_stderr}");
+        assert!(
+            status.success(),
+            "list (no server) failed\nstdout: {stdout}\nstderr: {_stderr}"
+        );
         let v: serde_json::Value = serde_json::from_str(&stdout)
             .unwrap_or_else(|e| panic!("list stdout not JSON: {e}\n{stdout}"));
         assert!(
@@ -163,9 +172,11 @@ async fn test_bc_5_11_002_output_schemas() {
 
     // ── call <server> <tool> → { "result": { "content": [...], "isError": bool } }
     {
-        let (stdout, _stderr, status) =
-            run_forge_mcp(&["call", &server, "mock_tool_0"]).await;
-        assert!(status.success(), "call failed\nstdout: {stdout}\nstderr: {_stderr}");
+        let (stdout, _stderr, status) = run_forge_mcp(&["call", &server, "mock_tool_0"]).await;
+        assert!(
+            status.success(),
+            "call failed\nstdout: {stdout}\nstderr: {_stderr}"
+        );
         let v: serde_json::Value = serde_json::from_str(&stdout)
             .unwrap_or_else(|e| panic!("call stdout not JSON: {e}\n{stdout}"));
         let result = v.get("result").expect("call output must have 'result' key");
@@ -182,7 +193,10 @@ async fn test_bc_5_11_002_output_schemas() {
     // ── info <server> → { "server": {...}, "capabilities": {...} }
     {
         let (stdout, _stderr, status) = run_forge_mcp(&["info", &server]).await;
-        assert!(status.success(), "info failed\nstdout: {stdout}\nstderr: {_stderr}");
+        assert!(
+            status.success(),
+            "info failed\nstdout: {stdout}\nstderr: {_stderr}"
+        );
         let v: serde_json::Value = serde_json::from_str(&stdout)
             .unwrap_or_else(|e| panic!("info stdout not JSON: {e}\n{stdout}"));
         assert!(
@@ -190,7 +204,9 @@ async fn test_bc_5_11_002_output_schemas() {
             "info output must have 'server' object, got: {v}"
         );
         assert!(
-            v.get("capabilities").map(|x| x.is_object()).unwrap_or(false),
+            v.get("capabilities")
+                .map(|x| x.is_object())
+                .unwrap_or(false),
             "info output must have 'capabilities' object, got: {v}"
         );
     }
@@ -198,7 +214,10 @@ async fn test_bc_5_11_002_output_schemas() {
     // ── grep <pattern> → { "matches": [...] }
     {
         let (stdout, _stderr, status) = run_forge_mcp(&["grep", "mock"]).await;
-        assert!(status.success(), "grep failed\nstdout: {stdout}\nstderr: {_stderr}");
+        assert!(
+            status.success(),
+            "grep failed\nstdout: {stdout}\nstderr: {_stderr}"
+        );
         let v: serde_json::Value = serde_json::from_str(&stdout)
             .unwrap_or_else(|e| panic!("grep stdout not JSON: {e}\n{stdout}"));
         assert!(
@@ -222,8 +241,7 @@ async fn test_bc_5_12_001_token_count_within_budget() {
     let (list_out, _, list_status) = run_forge_mcp(&["list", &server]).await;
     assert!(list_status.success(), "list failed: {list_out}");
 
-    let (call_out, _, call_status) =
-        run_forge_mcp(&["call", &server, "mock_tool_0"]).await;
+    let (call_out, _, call_status) = run_forge_mcp(&["call", &server, "mock_tool_0"]).await;
     assert!(call_status.success(), "call failed: {call_out}");
 
     let combined_bytes = list_out.len() + call_out.len();
@@ -300,7 +318,10 @@ async fn test_bc_5_11_002_pretty_print_flag() {
 
     // --pretty: multi-line indented JSON
     let (pretty_out, _, pretty_status) = run_forge_mcp(&["--pretty", "list", &server]).await;
-    assert!(pretty_status.success(), "list --pretty failed: {pretty_out}");
+    assert!(
+        pretty_status.success(),
+        "list --pretty failed: {pretty_out}"
+    );
     let pretty_trimmed = pretty_out.trim();
     assert!(
         pretty_trimmed.contains('\n'),

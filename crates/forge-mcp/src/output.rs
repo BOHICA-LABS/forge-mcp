@@ -263,26 +263,44 @@ mod tests {
     #[test]
     fn compact_is_single_line() {
         let v = ListServersOutput {
-            servers: vec![ServerEntry { uri: "stdio://test".into(), name: None }],
+            servers: vec![ServerEntry {
+                uri: "stdio://test".into(),
+                name: None,
+            }],
             _meta: None,
         };
-        let s = to_json_string(&v, OutputFlags { pretty: false, ..OutputFlags::default() });
+        let s = to_json_string(
+            &v,
+            OutputFlags {
+                pretty: false,
+                ..OutputFlags::default()
+            },
+        );
         assert!(!s.contains('\n'), "compact must be single-line: {s}");
     }
 
     #[test]
     fn pretty_is_multi_line() {
         let v = ListServersOutput {
-            servers: vec![ServerEntry { uri: "stdio://test".into(), name: None }],
+            servers: vec![ServerEntry {
+                uri: "stdio://test".into(),
+                name: None,
+            }],
             _meta: None,
         };
-        let s = to_json_string(&v, OutputFlags { pretty: true, ..OutputFlags::default() });
+        let s = to_json_string(
+            &v,
+            OutputFlags {
+                pretty: true,
+                ..OutputFlags::default()
+            },
+        );
         assert!(s.contains('\n'), "pretty must be multi-line: {s}");
     }
 
     #[test]
     fn approx_tokens_calculation() {
-        assert_eq!(approx_tokens("1234"), 1);  // 4 bytes / 4 = 1
+        assert_eq!(approx_tokens("1234"), 1); // 4 bytes / 4 = 1
         assert_eq!(approx_tokens(""), 0);
         // 2000-byte string → 500 tokens (boundary)
         let s: String = "a".repeat(2000);
@@ -291,7 +309,10 @@ mod tests {
 
     #[test]
     fn meta_omitted_when_none() {
-        let v = ListServersOutput { servers: vec![], _meta: None };
+        let v = ListServersOutput {
+            servers: vec![],
+            _meta: None,
+        };
         let s = serde_json::to_string(&v).unwrap();
         assert!(!s.contains("_meta"), "None meta must be omitted: {s}");
     }
@@ -300,7 +321,10 @@ mod tests {
     fn meta_present_when_some() {
         let v = ListToolsOutput {
             tools: vec![],
-            _meta: Some(ListMeta { server_uri: "x".into(), total: 0 }),
+            _meta: Some(ListMeta {
+                server_uri: "x".into(),
+                total: 0,
+            }),
         };
         let s = serde_json::to_string(&v).unwrap();
         assert!(s.contains("_meta"), "_meta must appear when Some: {s}");

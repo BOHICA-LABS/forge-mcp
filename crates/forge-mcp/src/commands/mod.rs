@@ -187,10 +187,9 @@ pub async fn handle_list(args: &ListArgs, flags: OutputFlags) -> Result<(), CliE
         Some(uri) => {
             // Connect and list tools.
             let (cmd, env_args) = parse_stdio_uri(uri)?;
-            let conn =
-                forge_core::connect_stdio(&cmd, &env_args, &HashMap::new())
-                    .await
-                    .map_err(CliError::Connection)?;
+            let conn = forge_core::connect_stdio(&cmd, &env_args, &HashMap::new())
+                .await
+                .map_err(CliError::Connection)?;
 
             let tools = forge_core::list_tools(&conn)
                 .await
@@ -200,11 +199,7 @@ pub async fn handle_list(args: &ListArgs, flags: OutputFlags) -> Result<(), CliE
                 .iter()
                 .map(|t| ToolEntry {
                     name: t.name.to_string(),
-                    description: t
-                        .description
-                        .as_deref()
-                        .unwrap_or("")
-                        .to_string(),
+                    description: t.description.as_deref().unwrap_or("").to_string(),
                 })
                 .collect();
 
@@ -273,7 +268,11 @@ fn discover_all_servers() -> Vec<OutputServerEntry> {
             continue;
         }
         if cfg.access_error.is_some() {
-            tracing::warn!("skipping {}: {}", cfg.path.display(), cfg.access_error.as_deref().unwrap_or(""));
+            tracing::warn!(
+                "skipping {}: {}",
+                cfg.path.display(),
+                cfg.access_error.as_deref().unwrap_or("")
+            );
             continue;
         }
         let content = match std::fs::read_to_string(&cfg.path) {
@@ -429,8 +428,10 @@ pub async fn handle_grep(args: &GrepArgs, flags: OutputFlags) -> Result<(), CliE
                 .filter_map(|e| {
                     // Only include stdio:// URIs that look like an absolute path
                     if let Some(path) = e.uri.strip_prefix("stdio://")
-                        && path.starts_with('/') && std::path::Path::new(path).exists() {
-                            return Some(e.uri);
+                        && path.starts_with('/')
+                        && std::path::Path::new(path).exists()
+                    {
+                        return Some(e.uri);
                     }
                     None
                 })
@@ -449,7 +450,9 @@ pub async fn handle_grep(args: &GrepArgs, flags: OutputFlags) -> Result<(), CliE
             }
         };
         // Use a short timeout for grep so we don't hang on unreachable servers.
-        let conn = match forge_core::connect_stdio_with_timeout(&cmd, &env_args, &HashMap::new(), 5).await {
+        let conn = match forge_core::connect_stdio_with_timeout(&cmd, &env_args, &HashMap::new(), 5)
+            .await
+        {
             Ok(c) => c,
             Err(e) => {
                 tracing::warn!("could not connect to {server_uri}: {e}");
@@ -465,20 +468,12 @@ pub async fn handle_grep(args: &GrepArgs, flags: OutputFlags) -> Result<(), CliE
         };
         for tool in &tools {
             let name_lower = tool.name.to_lowercase();
-            let desc_lower = tool
-                .description
-                .as_deref()
-                .unwrap_or("")
-                .to_lowercase();
+            let desc_lower = tool.description.as_deref().unwrap_or("").to_lowercase();
             if name_lower.contains(&pattern_lower) || desc_lower.contains(&pattern_lower) {
                 matches.push(GrepMatch {
                     server: server_uri.clone(),
                     tool: tool.name.to_string(),
-                    description: tool
-                        .description
-                        .as_deref()
-                        .unwrap_or("")
-                        .to_string(),
+                    description: tool.description.as_deref().unwrap_or("").to_string(),
                 });
             }
         }
@@ -493,7 +488,13 @@ pub async fn handle_grep(args: &GrepArgs, flags: OutputFlags) -> Result<(), CliE
         None
     };
 
-    print_json(&GrepOutput { matches, _meta: meta }, flags);
+    print_json(
+        &GrepOutput {
+            matches,
+            _meta: meta,
+        },
+        flags,
+    );
     Ok(())
 }
 
@@ -584,10 +585,7 @@ mod tests {
     #[test]
     fn test_bc_5_11_001_unknown_subcommand_rejected() {
         let result = TestCli::try_parse_from(["forge-mcp", "frobnicate"]);
-        assert!(
-            result.is_err(),
-            "unknown subcommand should fail to parse"
-        );
+        assert!(result.is_err(), "unknown subcommand should fail to parse");
     }
 
     // parse_stdio_uri: valid stdio URI

@@ -17,22 +17,20 @@ use std::{
     time::Duration,
 };
 
-use rmcp::{
-    ServerHandler,
-    handler::server::wrapper::Parameters,
-    model::{
-        ListPromptsResult, ListResourcesResult, PaginatedRequestParams, Prompt,
-        ServerCapabilities, ServerInfo,
-    },
-    schemars,
-    tool, tool_handler, tool_router,
-    handler::server::router::tool::ToolRouter,
-};
 use rmcp::model::RawResource;
 use rmcp::transport::streamable_http_server::{
-    SessionId, SessionManager,
+    SessionId, SessionManager, StreamableHttpServerConfig, StreamableHttpService,
     session::{ServerSseMessage, local::LocalSessionManager},
-    StreamableHttpServerConfig, StreamableHttpService,
+};
+use rmcp::{
+    ServerHandler,
+    handler::server::router::tool::ToolRouter,
+    handler::server::wrapper::Parameters,
+    model::{
+        ListPromptsResult, ListResourcesResult, PaginatedRequestParams, Prompt, ServerCapabilities,
+        ServerInfo,
+    },
+    schemars, tool, tool_handler, tool_router,
 };
 use serde::Deserialize;
 use tokio::sync::RwLock;
@@ -82,13 +80,11 @@ impl SessionTracker {
         drop(counts);
 
         if let Some(limit) = forget_after
-            && current >= limit {
-                self.forgotten
-                    .write()
-                    .await
-                    .insert(session_id.to_owned());
-                return true;
-            }
+            && current >= limit
+        {
+            self.forgotten.write().await.insert(session_id.to_owned());
+            return true;
+        }
         false
     }
 

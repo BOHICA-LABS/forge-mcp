@@ -18,7 +18,11 @@ fn forge_mcp_bin() -> PathBuf {
     if let Ok(p) = env::var("CARGO_BIN_EXE_forge-mcp") {
         return PathBuf::from(p);
     }
-    let bin_name = if cfg!(windows) { "forge-mcp.exe" } else { "forge-mcp" };
+    let bin_name = if cfg!(windows) {
+        "forge-mcp.exe"
+    } else {
+        "forge-mcp"
+    };
     let exe = env::current_exe().expect("current_exe");
     let dir = exe.parent().expect("exe parent");
     let candidate = dir.join(bin_name);
@@ -97,8 +101,7 @@ fn stdio_uri() -> String {
 #[tokio::test]
 async fn test_bc_5_12_002_no_ansi_in_pipe() {
     let server = stdio_uri();
-    let (stdout, _stderr, status) =
-        run_forge_mcp(&["list", &server]).await;
+    let (stdout, _stderr, status) = run_forge_mcp(&["list", &server]).await;
 
     assert!(
         status.success(),
@@ -129,13 +132,9 @@ async fn test_bc_5_12_002_no_ansi_in_pipe() {
 #[tokio::test]
 async fn test_bc_5_12_002_jq_compatible_output() {
     let server = stdio_uri();
-    let (stdout, _stderr, status) =
-        run_forge_mcp(&["list", &server]).await;
+    let (stdout, _stderr, status) = run_forge_mcp(&["list", &server]).await;
 
-    assert!(
-        status.success(),
-        "forge-mcp list failed; stderr: {_stderr}"
-    );
+    assert!(status.success(), "forge-mcp list failed; stderr: {_stderr}");
 
     // The raw stdout (as captured by a pipe) must parse as valid JSON.
     let val: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap_or_else(|e| {
@@ -234,13 +233,9 @@ async fn test_bc_5_12_002_null_separated_output() {
 #[tokio::test]
 async fn test_bc_5_12_002_stdout_flushed() {
     let server = stdio_uri();
-    let (stdout, _stderr, status) =
-        run_forge_mcp(&["list", &server]).await;
+    let (stdout, _stderr, status) = run_forge_mcp(&["list", &server]).await;
 
-    assert!(
-        status.success(),
-        "forge-mcp list failed; stderr: {_stderr}"
-    );
+    assert!(status.success(), "forge-mcp list failed; stderr: {_stderr}");
 
     // Output must be non-empty (flush must have delivered data).
     assert!(
@@ -257,9 +252,7 @@ async fn test_bc_5_12_002_stdout_flushed() {
 
     // The JSON must parse without error (no corruption from flush).
     let val: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap_or_else(|e| {
-        panic!(
-            "stdout_flushed check: stdout is not valid JSON: {e}\nstdout: {stdout}"
-        )
+        panic!("stdout_flushed check: stdout is not valid JSON: {e}\nstdout: {stdout}")
     });
 
     // Sanity: parsed value is an object.
@@ -283,8 +276,7 @@ async fn test_bc_5_12_002_stdout_flushed() {
 async fn test_bc_5_12_002_color_always_flag_accepted() {
     let server = stdio_uri();
     // --color=always must be accepted without error
-    let (stdout, _stderr, status) =
-        run_forge_mcp(&["--color=always", "list", &server]).await;
+    let (stdout, _stderr, status) = run_forge_mcp(&["--color=always", "list", &server]).await;
 
     assert!(
         status.success(),
@@ -302,8 +294,7 @@ async fn test_bc_5_12_002_color_always_flag_accepted() {
 #[tokio::test]
 async fn test_bc_5_12_002_color_never_flag() {
     let server = stdio_uri();
-    let (stdout, _stderr, status) =
-        run_forge_mcp(&["--color=never", "list", &server]).await;
+    let (stdout, _stderr, status) = run_forge_mcp(&["--color=never", "list", &server]).await;
 
     assert!(
         status.success(),

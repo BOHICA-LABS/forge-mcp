@@ -175,7 +175,10 @@ impl LlmProxy {
         };
 
         // POST to /v1/chat/completions.
-        let url = format!("{}/v1/chat/completions", self.config.url.trim_end_matches('/'));
+        let url = format!(
+            "{}/v1/chat/completions",
+            self.config.url.trim_end_matches('/')
+        );
 
         let response = self
             .client

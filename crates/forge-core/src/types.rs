@@ -325,9 +325,18 @@ mod version_tests {
 
     #[test]
     fn test_spec_version_parse_known_versions() {
-        assert_eq!(SpecVersion::parse("2024-11-05"), Some(SpecVersion::V2024_11_05));
-        assert_eq!(SpecVersion::parse("2025-03-26"), Some(SpecVersion::V2025_03_26));
-        assert_eq!(SpecVersion::parse("2025-06-18"), Some(SpecVersion::V2025_06_18));
+        assert_eq!(
+            SpecVersion::parse("2024-11-05"),
+            Some(SpecVersion::V2024_11_05)
+        );
+        assert_eq!(
+            SpecVersion::parse("2025-03-26"),
+            Some(SpecVersion::V2025_03_26)
+        );
+        assert_eq!(
+            SpecVersion::parse("2025-06-18"),
+            Some(SpecVersion::V2025_06_18)
+        );
     }
 
     #[test]
@@ -352,7 +361,10 @@ mod version_tests {
     fn test_BC_2_04_003_features_latest_version_all_enabled() {
         let fs = features_for_version("2025-06-18");
         assert!(fs.elicitation, "elicitation must be enabled for 2025-06-18");
-        assert!(fs.streamable_http, "streamable_http must be enabled for 2025-06-18");
+        assert!(
+            fs.streamable_http,
+            "streamable_http must be enabled for 2025-06-18"
+        );
         assert!(fs.logging, "logging must be enabled for 2025-06-18");
         assert!(fs.tools);
         assert!(fs.resources);
@@ -363,8 +375,14 @@ mod version_tests {
     #[test]
     fn test_BC_2_04_003_features_2024_11_05_no_elicitation() {
         let fs = features_for_version("2024-11-05");
-        assert!(!fs.elicitation, "elicitation must be disabled for 2024-11-05");
-        assert!(!fs.streamable_http, "streamable_http must be disabled for 2024-11-05");
+        assert!(
+            !fs.elicitation,
+            "elicitation must be disabled for 2024-11-05"
+        );
+        assert!(
+            !fs.streamable_http,
+            "streamable_http must be disabled for 2024-11-05"
+        );
         assert!(fs.logging, "logging must be enabled for 2024-11-05");
         assert!(fs.tools);
         assert!(fs.resources);
@@ -375,8 +393,14 @@ mod version_tests {
     #[test]
     fn test_features_2025_03_26_has_streamable_no_elicitation() {
         let fs = features_for_version("2025-03-26");
-        assert!(!fs.elicitation, "elicitation must be disabled for 2025-03-26");
-        assert!(fs.streamable_http, "streamable_http must be enabled for 2025-03-26");
+        assert!(
+            !fs.elicitation,
+            "elicitation must be disabled for 2025-03-26"
+        );
+        assert!(
+            fs.streamable_http,
+            "streamable_http must be enabled for 2025-03-26"
+        );
         assert!(fs.logging);
         assert!(fs.tools);
         assert!(fs.resources);

@@ -48,8 +48,8 @@ use crate::error::{DaemonError, Result};
 use crate::pool::{ConnectionFactory, PoolConfig, SessionPool};
 use crate::session::SessionId;
 use crate::socket::{
-    daemon_socket_path, pid_lock_path, resolve_socket_conflict,
-    write_pid_lock, SocketConflictResolution,
+    SocketConflictResolution, daemon_socket_path, pid_lock_path, resolve_socket_conflict,
+    write_pid_lock,
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -197,8 +197,8 @@ impl DaemonServer {
             }
         }
 
-        let listener = UnixListener::bind(&self.socket_path)
-            .map_err(|e| DaemonError::SocketBind {
+        let listener =
+            UnixListener::bind(&self.socket_path).map_err(|e| DaemonError::SocketBind {
                 path: self.socket_path.display().to_string(),
                 cause: e.to_string(),
             })?;
@@ -264,8 +264,10 @@ async fn handle_unix_connection(
     while let Ok(Some(line)) = lines.next_line().await {
         debug!("daemon received: {line}");
         let response = dispatch_request(&line, &pool).await;
-        let mut out = serde_json::to_string(&response)
-            .unwrap_or_else(|_| r#"{"jsonrpc":"2.0","id":0,"error":{"code":-32700,"message":"internal error"}}"#.to_string());
+        let mut out = serde_json::to_string(&response).unwrap_or_else(|_| {
+            r#"{"jsonrpc":"2.0","id":0,"error":{"code":-32700,"message":"internal error"}}"#
+                .to_string()
+        });
         out.push('\n');
         writer.write_all(out.as_bytes()).await?;
     }
@@ -274,10 +276,7 @@ async fn handle_unix_connection(
 }
 
 /// Dispatch a raw JSON-RPC line to the pool and return a serializable response.
-async fn dispatch_request(
-    line: &str,
-    pool: &SessionPool,
-) -> serde_json::Value {
+async fn dispatch_request(line: &str, pool: &SessionPool) -> serde_json::Value {
     let req: DaemonRequest = match serde_json::from_str(line) {
         Ok(r) => r,
         Err(e) => {
@@ -425,10 +424,9 @@ impl DaemonClient {
         line.push('\n');
         writer.write_all(line.as_bytes()).await?;
 
-        let response_line = lines
-            .next_line()
-            .await?
-            .ok_or_else(|| DaemonError::Ipc("daemon closed connection without response".to_string()))?;
+        let response_line = lines.next_line().await?.ok_or_else(|| {
+            DaemonError::Ipc("daemon closed connection without response".to_string())
+        })?;
 
         let value: serde_json::Value = serde_json::from_str(&response_line)?;
         Ok(value)
@@ -470,8 +468,7 @@ pub async fn get_or_start_daemon_at(socket_path: PathBuf) -> Result<DaemonClient
     start_daemon_process(&socket_path).await?;
 
     // Wait for the socket to appear.
-    let deadline = tokio::time::Instant::now()
-        + Duration::from_secs(DAEMON_START_TIMEOUT_SECS);
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(DAEMON_START_TIMEOUT_SECS);
 
     loop {
         if tokio::time::Instant::now() >= deadline {
@@ -498,8 +495,7 @@ pub async fn get_or_start_daemon_at(socket_path: PathBuf) -> Result<DaemonClient
 async fn start_daemon_process(_socket_path: &PathBuf) -> Result<()> {
     // Determine the current executable path — run the same binary with
     // `daemon` subcommand.
-    let exe = std::env::current_exe()
-        .unwrap_or_else(|_| PathBuf::from("forge-mcp"));
+    let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("forge-mcp"));
 
     debug!("spawning daemon: {:?} daemon", exe);
 
@@ -517,10 +513,7 @@ async fn start_daemon_process(_socket_path: &PathBuf) -> Result<()> {
 /// Request a connection from the daemon.
 ///
 /// Convenience wrapper around `DaemonClient::request_connection`.
-pub async fn request_connection(
-    client: &DaemonClient,
-    server: &str,
-) -> Result<SessionHandle> {
+pub async fn request_connection(client: &DaemonClient, server: &str) -> Result<SessionHandle> {
     client.request_connection(server).await
 }
 
@@ -586,7 +579,9 @@ mod tests {
         let sock = tmpdir.path().join("daemon.sock");
 
         // Plant a stale socket file (no one listening).
-        tokio::fs::write(&sock, b"stale").await.expect("write stale");
+        tokio::fs::write(&sock, b"stale")
+            .await
+            .expect("write stale");
         assert!(sock.exists(), "stale file must exist before start");
 
         let factory: ConnectionFactory = Arc::new(move |server: &str| {
@@ -610,7 +605,10 @@ mod tests {
 
         // A real client should now be able to connect.
         let client = DaemonClient::new(sock.clone());
-        assert!(client.is_alive().await, "daemon must be listening after stale cleanup");
+        assert!(
+            client.is_alive().await,
+            "daemon must be listening after stale cleanup"
+        );
     }
 
     /// AC-002 (STORY-012): If a daemon is already alive, DaemonServer::run
@@ -655,10 +653,16 @@ mod tests {
         );
         // This should return Ok(()) immediately because the first daemon is alive.
         let result = server2.run().await;
-        assert!(result.is_ok(), "second daemon start must succeed (UseExisting): {result:?}");
+        assert!(
+            result.is_ok(),
+            "second daemon start must succeed (UseExisting): {result:?}"
+        );
 
         // First daemon must still be alive.
-        assert!(client.is_alive().await, "first daemon must still be alive after second start attempt");
+        assert!(
+            client.is_alive().await,
+            "first daemon must still be alive after second start attempt"
+        );
     }
 
     // ── In-process daemon integration test (AC-001, AC-002) ──────────────────

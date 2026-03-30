@@ -40,7 +40,11 @@ fn test_server_bin() -> String {
         .and_then(|p| p.parent()) // workspace root
         .expect("expected workspace root");
     let target_dir = workspace_root.join("target");
-    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
+    let bin_name = if cfg!(windows) {
+        "forge-test-server.exe"
+    } else {
+        "forge-test-server"
+    };
 
     // Check target-triple subdirectories first (CI with --target <triple>).
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
@@ -162,8 +166,14 @@ async fn test_BC_2_05_001_list_tools_empty_server() {
         .await
         .expect("connect");
 
-    let tools = list_tools(&conn).await.expect("list_tools empty should succeed");
-    assert_eq!(tools.len(), 0, "expected empty Vec for server with no tools");
+    let tools = list_tools(&conn)
+        .await
+        .expect("list_tools empty should succeed");
+    assert_eq!(
+        tools.len(),
+        0,
+        "expected empty Vec for server with no tools"
+    );
 
     conn.shutdown().await.ok();
 }
@@ -328,11 +338,19 @@ async fn test_BC_2_05_001_tool_error_vs_protocol_error() {
     .await;
 
     match result {
-        Ok(ToolResult { is_error: true, content }) => {
+        Ok(ToolResult {
+            is_error: true,
+            content,
+        }) => {
             // Correct: tool error, not a protocol error.
-            assert!(!content.is_empty(), "error result should have content explaining the error");
+            assert!(
+                !content.is_empty(),
+                "error result should have content explaining the error"
+            );
         }
-        Ok(ToolResult { is_error: false, .. }) => {
+        Ok(ToolResult {
+            is_error: false, ..
+        }) => {
             panic!("expected is_error=true but got is_error=false");
         }
         Err(e) => {
@@ -379,13 +397,7 @@ async fn test_BC_2_05_001_protocol_error_on_unknown_tool() {
         .expect("connect");
 
     // The mock server returns a JSON-RPC error for unknown tools.
-    let result = call_tool(
-        &conn,
-        "nonexistent_tool",
-        serde_json::json!({}),
-        None,
-    )
-    .await;
+    let result = call_tool(&conn, "nonexistent_tool", serde_json::json!({}), None).await;
 
     assert!(
         result.is_err(),
@@ -436,14 +448,16 @@ async fn test_BC_2_05_001_argument_schema_validation() {
         .expect("connect");
 
     // Build a tool definition with a required `input` field.
-    let schema: std::sync::Arc<serde_json::Map<String, serde_json::Value>> =
-        std::sync::Arc::new(serde_json::from_value(serde_json::json!({
+    let schema: std::sync::Arc<serde_json::Map<String, serde_json::Value>> = std::sync::Arc::new(
+        serde_json::from_value(serde_json::json!({
             "type": "object",
             "properties": {
                 "input": { "type": "string" }
             },
             "required": ["input"]
-        })).expect("valid schema"));
+        }))
+        .expect("valid schema"),
+    );
 
     let tool_def = rmcp::model::Tool::new("strict_tool", "Needs input", schema);
 
@@ -459,7 +473,10 @@ async fn test_BC_2_05_001_argument_schema_validation() {
     match result {
         Err(CoreError::SchemaValidationFailed { tool, reason }) => {
             assert_eq!(tool, "strict_tool");
-            assert!(!reason.is_empty(), "reason should explain the validation failure");
+            assert!(
+                !reason.is_empty(),
+                "reason should explain the validation failure"
+            );
         }
         other => panic!("expected SchemaValidationFailed, got: {other:?}"),
     }

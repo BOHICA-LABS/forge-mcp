@@ -36,7 +36,9 @@ async fn test_BC_2_05_009_progress_notification_received() {
     });
 
     // Subscriber must receive the event.
-    let event = rx.try_recv().expect("should have received a progress event");
+    let event = rx
+        .try_recv()
+        .expect("should have received a progress event");
     assert_eq!(event.current, 3.0);
     assert_eq!(event.total, Some(10.0));
     // Token must match.
@@ -66,7 +68,10 @@ async fn test_BC_2_05_009_cancel_request() {
         current: 1.0,
         total: Some(5.0),
     });
-    assert!(rx.try_recv().is_ok(), "first progress before cancel should arrive");
+    assert!(
+        rx.try_recv().is_ok(),
+        "first progress before cancel should arrive"
+    );
 
     // Cancel the request.
     bus.cancel_request(tok.clone());
@@ -129,7 +134,10 @@ fn test_BC_2_05_010_tool_error_is_ok_result() {
     // Must not be an Err — callers must receive Ok.
     // (The static type guarantees this: `ToolResult::from` returns ToolResult, not Result<...>)
     // We additionally verify content is preserved.
-    assert!(!result.content.is_empty(), "error result must carry content");
+    assert!(
+        !result.content.is_empty(),
+        "error result must carry content"
+    );
 }
 
 // ── AC-005: ToolResult Display — ✓ / ✗, no panic ────────────────────────────

@@ -153,12 +153,13 @@ async fn test_BC_2_05_004_no_llm_configured_errors() {
     drop(handler);
 
     // Explicit: handler with no proxy → error.
-    let no_proxy_handler = forge_core::ForgeClientHandler::new(forge_core::ClientCapabilityConfig {
-        enable_sampling: false,
-        enable_elicitation: false,
-        enable_roots: false,
-        root_paths: vec![],
-    });
+    let no_proxy_handler =
+        forge_core::ForgeClientHandler::new(forge_core::ClientCapabilityConfig {
+            enable_sampling: false,
+            enable_elicitation: false,
+            enable_roots: false,
+            root_paths: vec![],
+        });
     drop(no_proxy_handler);
 
     // Verify error code from a proxy-None path by using a wrapper that
@@ -197,9 +198,9 @@ async fn test_BC_2_05_004_model_preferences_passthrough() {
 
     // Build request with a specific model hint.
     let mut request = minimal_request("Test model preference");
-    request.model_preferences = Some(ModelPreferences::new().with_hints(vec![ModelHint::new(
-        "claude-3-5-sonnet-20241022",
-    )]));
+    request.model_preferences = Some(
+        ModelPreferences::new().with_hints(vec![ModelHint::new("claude-3-5-sonnet-20241022")]),
+    );
 
     let result = proxy
         .send_sampling_request(&request)
@@ -214,7 +215,11 @@ async fn test_BC_2_05_004_model_preferences_passthrough() {
 
     // Verify the wiremock server was actually called (request was forwarded).
     let received = server.received_requests().await.unwrap();
-    assert_eq!(received.len(), 1, "exactly one request should have been forwarded");
+    assert_eq!(
+        received.len(),
+        1,
+        "exactly one request should have been forwarded"
+    );
 
     // Parse the body to verify model field was forwarded correctly.
     let body: serde_json::Value =
@@ -267,7 +272,9 @@ async fn test_BC_2_05_004_human_in_loop_fields() {
         serde_json::from_slice(&received[0].body).expect("body should be valid JSON");
 
     // stop_sequences maps to `stop` in OpenAI API.
-    let stop = body["stop"].as_array().expect("stop field should be an array");
+    let stop = body["stop"]
+        .as_array()
+        .expect("stop field should be an array");
     assert_eq!(stop.len(), 2, "both stop sequences should be forwarded");
     assert!(
         stop.iter().any(|s| s.as_str() == Some("<|end|>")),

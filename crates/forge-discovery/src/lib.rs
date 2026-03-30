@@ -31,6 +31,6 @@ pub mod types;
 pub use aggregator::aggregate_configs;
 pub use discovery::discover_configs;
 pub use error::{ConfigError, DiscoveryError};
-pub use parser::{parse_config, ParseInput};
+pub use parser::{ParseInput, parse_config};
 pub use paths::Os;
 pub use types::{ConfigScope, DiscoveredConfig, EditorKind};

@@ -27,25 +27,24 @@ pub mod types;
 pub mod utilities;
 
 // Convenience re-exports for callers.
+pub use connection::MCP_LATEST_VERSION;
 pub use connection::{ConnectionState, McpConnection, TransportKind};
 pub use error::{CoreError, ForgeError, Result};
 pub use handler::{ClientCapabilityConfig, ForgeClientHandler, make_cancelled_result};
-pub use llm_proxy::{LlmProxy, LlmProxyConfig};
 pub use lifecycle::{ConnectionLifecycleConfig, ConnectionManager, PingFn, close_with_timeout};
+pub use llm_proxy::{LlmProxy, LlmProxyConfig};
+pub use pagination::{MAX_PAGES, PaginationState, PaginationStep};
+pub use prompts::{PromptCache, get_prompt, list_prompts_all};
+pub use protocol::{ToolListInvalidator, ToolListWatcher, ToolResult, call_tool, list_tools};
+pub use resources::{Resource, ResourceContent, ResourceData, list_resources, read_resource};
+pub use subscriptions::{ResourceSubscription, subscribe_resource, subscribe_resource_with_sender};
 pub use transport::{
-    connect_http, connect_http_with_config, connect_stdio, connect_stdio_with_config,
-    connect_stdio_with_config_and_timeout, connect_stdio_with_timeout,
-    DEFAULT_CONNECT_TIMEOUT_SECS,
+    DEFAULT_CONNECT_TIMEOUT_SECS, connect_http, connect_http_with_config, connect_stdio,
+    connect_stdio_with_config, connect_stdio_with_config_and_timeout, connect_stdio_with_timeout,
 };
 pub use types::{
     ConfigSource, ConflictRecord, ConflictSource, EditorKind, FeatureSet, HttpConfig,
     NegotiatedCapabilities, ServerEntry, ServerRegistry, SpecVersion, StdioConfig, Transport,
     TransportConfig, features_for_version,
 };
-pub use connection::MCP_LATEST_VERSION;
-pub use pagination::{MAX_PAGES, PaginationState, PaginationStep};
-pub use protocol::{ToolListInvalidator, ToolListWatcher, ToolResult, call_tool, list_tools};
-pub use resources::{Resource, ResourceContent, ResourceData, list_resources, read_resource};
-pub use subscriptions::{ResourceSubscription, subscribe_resource, subscribe_resource_with_sender};
-pub use prompts::{PromptCache, get_prompt, list_prompts_all};
 pub use utilities::{complete, list_roots, notify_roots_list_changed, set_log_level};

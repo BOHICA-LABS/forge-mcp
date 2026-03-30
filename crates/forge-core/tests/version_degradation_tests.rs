@@ -42,7 +42,11 @@ fn test_server_bin() -> String {
         .and_then(|p| p.parent()) // workspace root
         .expect("expected workspace root");
     let target_dir = workspace_root.join("target");
-    let bin_name = if cfg!(windows) { "forge-test-server.exe" } else { "forge-test-server" };
+    let bin_name = if cfg!(windows) {
+        "forge-test-server.exe"
+    } else {
+        "forge-test-server"
+    };
 
     // Check target-triple subdirectories first (CI with --target <triple>).
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
@@ -69,15 +73,30 @@ fn test_server_bin() -> String {
 #[test]
 fn test_BC_2_04_003_version_detection_parse() {
     // Known versions parse successfully.
-    assert_eq!(SpecVersion::parse("2024-11-05"), Some(SpecVersion::V2024_11_05));
-    assert_eq!(SpecVersion::parse("2025-03-26"), Some(SpecVersion::V2025_03_26));
-    assert_eq!(SpecVersion::parse("2025-06-18"), Some(SpecVersion::V2025_06_18));
+    assert_eq!(
+        SpecVersion::parse("2024-11-05"),
+        Some(SpecVersion::V2024_11_05)
+    );
+    assert_eq!(
+        SpecVersion::parse("2025-03-26"),
+        Some(SpecVersion::V2025_03_26)
+    );
+    assert_eq!(
+        SpecVersion::parse("2025-06-18"),
+        Some(SpecVersion::V2025_06_18)
+    );
 
     // Both versions from the story spec are supported.
     // Story references "2024-11-05" (older) and "2025-11-25" (story draft name
     // for latest). The real rmcp latest is "2025-06-18".
-    assert!(SpecVersion::parse("2024-11-05").is_some(), "2024-11-05 must be recognised");
-    assert!(SpecVersion::parse("2025-06-18").is_some(), "2025-06-18 must be recognised");
+    assert!(
+        SpecVersion::parse("2024-11-05").is_some(),
+        "2024-11-05 must be recognised"
+    );
+    assert!(
+        SpecVersion::parse("2025-06-18").is_some(),
+        "2025-06-18 must be recognised"
+    );
 }
 
 /// AC-001: latest version → all features available.
@@ -85,7 +104,10 @@ fn test_BC_2_04_003_version_detection_parse() {
 fn test_BC_2_04_003_version_detection_latest_all_features() {
     let fs = features_for_version("2025-06-18");
     assert!(fs.elicitation, "latest version must enable elicitation");
-    assert!(fs.streamable_http, "latest version must enable streamable_http");
+    assert!(
+        fs.streamable_http,
+        "latest version must enable streamable_http"
+    );
     assert!(fs.logging, "latest version must enable logging");
     assert!(fs.tools);
     assert!(fs.resources);
@@ -103,10 +125,19 @@ fn test_BC_2_04_003_version_mismatch_older_version_reduces_features() {
     let latest_fs = features_for_version("2025-06-18");
 
     // Older version must have fewer features.
-    assert!(!older_fs.elicitation, "2024-11-05 must not have elicitation");
-    assert!(!older_fs.streamable_http, "2024-11-05 must not have streamable_http");
+    assert!(
+        !older_fs.elicitation,
+        "2024-11-05 must not have elicitation"
+    );
+    assert!(
+        !older_fs.streamable_http,
+        "2024-11-05 must not have streamable_http"
+    );
     assert!(latest_fs.elicitation, "2025-06-18 must have elicitation");
-    assert!(latest_fs.streamable_http, "2025-06-18 must have streamable_http");
+    assert!(
+        latest_fs.streamable_http,
+        "2025-06-18 must have streamable_http"
+    );
 
     // Basic features are available in both.
     assert!(older_fs.tools && older_fs.resources && older_fs.prompts);
@@ -160,7 +191,10 @@ fn test_BC_2_04_003_unknown_version_continues() {
     // EC-002: future version like "2026-01-01" must not crash.
     let fs = features_for_version("2026-01-01");
     // Conservative: advanced features off, basic features on.
-    assert!(!fs.elicitation, "unknown future version must not enable elicitation");
+    assert!(
+        !fs.elicitation,
+        "unknown future version must not enable elicitation"
+    );
     assert!(fs.tools, "unknown version must still allow tools");
     assert!(fs.resources, "unknown version must still allow resources");
     assert!(fs.prompts, "unknown version must still allow prompts");
@@ -189,7 +223,7 @@ fn test_BC_2_04_003_version_string_edge_cases() {
         "0000-00-00",
         "\n2024-11-05\n",
         " 2024-11-05 ", // whitespace
-        "2024-11-05\0",  // null byte
+        "2024-11-05\0", // null byte
     ];
     for case in &edge_cases {
         // Must not panic.
@@ -215,7 +249,10 @@ async fn test_BC_2_04_003_version_detection_live_server() {
         .expect("connect should succeed");
 
     let version = conn.protocol_version();
-    assert!(!version.is_empty(), "protocol_version must not be empty after connect");
+    assert!(
+        !version.is_empty(),
+        "protocol_version must not be empty after connect"
+    );
     assert!(
         version.contains('-'),
         "protocol version must be a date-like string: {version}"
@@ -234,10 +271,7 @@ async fn test_BC_2_04_003_version_detection_live_server() {
 #[tokio::test]
 async fn test_BC_2_04_003_version_detection_latest_enables_all_features() {
     let bin = test_server_bin();
-    let args = vec![
-        "--tools".to_string(),
-        "1".to_string(),
-    ];
+    let args = vec!["--tools".to_string(), "1".to_string()];
     let env = HashMap::new();
 
     let conn = connect_stdio(&bin, &args, &env)
@@ -262,7 +296,10 @@ async fn test_BC_2_04_003_version_detection_latest_enables_all_features() {
         conn.supports_streamable_http(),
         "latest version server must support streamable_http"
     );
-    assert!(!conn.has_version_mismatch(), "no mismatch when server reports latest");
+    assert!(
+        !conn.has_version_mismatch(),
+        "no mismatch when server reports latest"
+    );
 
     conn.shutdown().await.ok();
 }

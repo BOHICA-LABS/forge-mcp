@@ -122,9 +122,8 @@ where
     const MAX_PAGES: usize = 100;
 
     for _ in 0..MAX_PAGES {
-        let params = cursor.map(|c| {
-            rmcp::model::PaginatedRequestParams::default().with_cursor(Some(c))
-        });
+        let params =
+            cursor.map(|c| rmcp::model::PaginatedRequestParams::default().with_cursor(Some(c)));
 
         let result = conn
             .peer()
@@ -177,7 +176,8 @@ where
 
     let params = match arguments {
         Some(args) => {
-            let json_object: serde_json::Map<String, serde_json::Value> = args.into_iter().collect();
+            let json_object: serde_json::Map<String, serde_json::Value> =
+                args.into_iter().collect();
             GetPromptRequestParams::new(name).with_arguments(json_object)
         }
         None => GetPromptRequestParams::new(name),
@@ -202,7 +202,10 @@ mod cache_tests {
     fn test_prompt_cache_starts_invalid() {
         let cache = PromptCache::new();
         assert!(!cache.is_valid(), "cache should start invalid");
-        assert!(cache.get().is_none(), "cache.get() should return None when invalid");
+        assert!(
+            cache.get().is_none(),
+            "cache.get() should return None when invalid"
+        );
     }
 
     #[test]
@@ -227,14 +230,23 @@ mod cache_tests {
 
         // Populate cache.
         cache.set(vec![Prompt::new("my_prompt", Some("My prompt"), None)]);
-        assert!(cache.is_valid(), "cache should be valid before invalidation");
+        assert!(
+            cache.is_valid(),
+            "cache should be valid before invalidation"
+        );
 
         // Simulate list_changed notification.
         cache.invalidate();
 
         // Cache must now be invalid.
-        assert!(!cache.is_valid(), "cache should be invalid after invalidate()");
-        assert!(cache.get().is_none(), "cache.get() should return None after invalidate()");
+        assert!(
+            !cache.is_valid(),
+            "cache should be invalid after invalidate()"
+        );
+        assert!(
+            cache.get().is_none(),
+            "cache.get() should return None after invalidate()"
+        );
     }
 
     #[test]
@@ -254,6 +266,9 @@ mod cache_tests {
         cache2.invalidate();
 
         // cache1 must also see the invalidation.
-        assert!(!cache1.is_valid(), "original cache should see invalidation from clone");
+        assert!(
+            !cache1.is_valid(),
+            "original cache should see invalidation from clone"
+        );
     }
 }
