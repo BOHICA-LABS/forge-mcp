@@ -11,10 +11,12 @@
 //! - Compute traffic statistics: message rates, payload sizes, latency distributions
 //! - Feed health and security crates with raw message observations
 
+pub mod buffer;
 pub mod throughput;
 pub mod timing;
 pub mod types;
 
+pub use buffer::RingBuffer;
 pub use throughput::ThroughputWindow;
 pub use timing::TimingAnalyzer;
 pub use types::TimedMessage;
