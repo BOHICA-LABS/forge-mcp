@@ -17,10 +17,10 @@
 - **Wave 6:** NOT STARTED (STORY-058 through STORY-065)
 
 ## Develop Branch
-- **HEAD:** `9516a95` — [STORY-027] Transparent JSON-RPC Message Capture (#26)
-- **Total PRs merged:** 26 (#1 through #26)
-- **Total stories merged:** 26/65 (STORY-001 through STORY-027)
-- **Total points merged:** 136/298 (46%)
+- **HEAD:** `ffaf4227` — [STORY-028] Per-Message Timing & Throughput Analysis (#28)
+- **Total PRs merged:** 27 (#1 through #28)
+- **Total stories merged:** 27/65 (STORY-001 through STORY-028)
+- **Total points merged:** 141/298 (47%)
 - **Waves completed:** 3/7 (W0, W1, W2)
 - **CI status:** 🟢 All 5 platforms green (last run on feature/STORY-029)
 
@@ -35,7 +35,7 @@
 
 | Story | Points | Stubs | Red Gate | TDD | Demo Evidence | Pushed | PR | Merged |
 |-------|--------|-------|----------|-----|---------------|--------|----|--------|
-| STORY-028 (timing analysis) | 5 | ✅ `428b903` | ✅ 7 tests `bfcd356` | ✅ 7/7 pass `11950b9` | ⚠️ On disk, NOT committed | ❌ | ❌ | ❌ |
+| STORY-028 (timing analysis) | 5 | ✅ `428b903` | ✅ 7 tests `bfcd356` | ✅ 7/7 pass `11950b9` | ✅ Committed `0c488cf` | ✅ | PR #28 ✅ MERGED | ✅ |
 | STORY-029 (capture buffer) | 5 | ✅ `f2648ca` | ✅ 7 tests `23e2cf4` | ✅ 7/7 pass `4f2e823` | ✅ Committed `0c488cf` | ✅ | PR #27 OPEN (CI green, no reviews) | ❌ |
 | STORY-033 (metric collection) | 5 | ✅ `59d4b08` | ✅ 8 tests `e41cddd` | ✅ 8/8 pass `0c0ea5a` | ⚠️ On disk, NOT committed | ❌ | ❌ | ❌ |
 

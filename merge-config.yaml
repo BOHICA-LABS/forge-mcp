@@ -37,3 +37,15 @@ budget:
     - formal-verifier    # proof quality depends on model
     - pr-reviewer        # cognitive diversity depends on model
     - security-reviewer  # security analysis depends on model
+
+autonomy:
+  # Merge autonomy level
+  # Level 3:   All PRs require human review
+  # Level 3.5: Low-risk auto-merge; medium/high-risk human review
+  # Level 4:   Full auto-merge (AI review only)
+  level: 3.5
+  auto_merge_criteria:
+    max_story_points: 3
+    require_clean_security_review: true
+    require_pr_reviewer_approval: true
+    block_on_crit_high_modules: true
