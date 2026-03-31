@@ -60,7 +60,10 @@ fn test_BC_6_13_001_throughput_counter_updates() {
     }
 
     let rps = collector.messages_per_second();
-    assert!(rps > 0.0, "messages_per_second should be > 0 after recording 100 messages, got {rps}");
+    assert!(
+        rps > 0.0,
+        "messages_per_second should be > 0 after recording 100 messages, got {rps}"
+    );
 }
 
 /// AC-004 (BC-6.13.001 — MetricSnapshot structure)
@@ -136,9 +139,21 @@ fn test_single_message_histogram() {
     let mut collector = LatencyCollector::new(60);
     collector.record_latency(42.0);
 
-    assert_eq!(collector.p50(), 42.0, "p50 should equal the sole recorded value");
-    assert_eq!(collector.p95(), 42.0, "p95 should equal the sole recorded value");
-    assert_eq!(collector.p99(), 42.0, "p99 should equal the sole recorded value");
+    assert_eq!(
+        collector.p50(),
+        42.0,
+        "p50 should equal the sole recorded value"
+    );
+    assert_eq!(
+        collector.p95(),
+        42.0,
+        "p95 should equal the sole recorded value"
+    );
+    assert_eq!(
+        collector.p99(),
+        42.0,
+        "p99 should equal the sole recorded value"
+    );
 }
 
 /// EC-003: Very high latency (60 000 ms / 60 s) — no overflow, exact value stored.
