@@ -37,8 +37,12 @@ pub struct MetricSnapshot {
     /// Observed request throughput in requests per second.
     pub throughput_rps: f64,
     /// Observed error rate as a percentage (0.0–100.0).
+    ///
+    /// Always `0.0` until STORY-034 implements error-rate tracking.
     pub error_rate_pct: f64,
     /// Current alert state computed from the above metrics.
+    ///
+    /// Always [`AlertState::Normal`] until STORY-036 implements alert logic.
     pub alert_state: AlertState,
 }
 
@@ -47,11 +51,24 @@ impl MetricSnapshot {
     ///
     /// Queries each collector for its current values and stamps the snapshot
     /// with the current wall-clock time.
+    ///
+    /// # Notes
+    /// - `error_rate_pct` is always `0.0` (implemented in STORY-034).
+    /// - `alert_state` is always [`AlertState::Normal`] (implemented in STORY-036).
     pub fn from_collectors(
         server_name: &str,
         latency: &LatencyCollector,
         throughput: &ThroughputCollector,
     ) -> Self {
-        todo!("STORY-033: implement MetricSnapshot::from_collectors")
+        Self {
+            server_name: server_name.to_owned(),
+            timestamp: Instant::now(),
+            latency_p50_ms: latency.p50(),
+            latency_p95_ms: latency.p95(),
+            latency_p99_ms: latency.p99(),
+            throughput_rps: throughput.messages_per_second(),
+            error_rate_pct: 0.0,
+            alert_state: AlertState::Normal,
+        }
     }
 }
