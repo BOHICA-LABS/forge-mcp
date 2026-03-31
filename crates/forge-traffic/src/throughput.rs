@@ -10,10 +10,10 @@
 //! - Expired entries are lazily evicted on each [`record`] or
 //!   [`messages_per_second`] call.
 
-use std::time::Instant;
+use std::collections::VecDeque;
+use std::time::{Duration, Instant};
 
 /// Pure sliding-window throughput counter.
-#[allow(dead_code)] // fields used by implementation (STORY-028 Phase 3)
 ///
 /// Records message arrival timestamps and computes the instantaneous
 /// throughput (messages/second) over the configured window.
@@ -27,9 +27,8 @@ use std::time::Instant;
 pub struct ThroughputWindow {
     /// Window duration in seconds.
     window_secs: u64,
-    // Implementation state is added in Phase 3 (TDD green pass).
-    // Placeholder to hold recorded timestamps.
-    _timestamps: std::collections::VecDeque<Instant>,
+    /// Recorded timestamps within the sliding window.
+    timestamps: VecDeque<Instant>,
 }
 
 impl ThroughputWindow {
@@ -40,7 +39,7 @@ impl ThroughputWindow {
     pub fn new(window_secs: u64) -> Self {
         Self {
             window_secs,
-            _timestamps: std::collections::VecDeque::new(),
+            timestamps: VecDeque::new(),
         }
     }
 
@@ -48,8 +47,9 @@ impl ThroughputWindow {
     ///
     /// Appends the timestamp to the window and evicts entries older than
     /// `window_secs` from the front of the deque.
-    pub fn record(&mut self, _timestamp: Instant) {
-        todo!("STORY-028: implement sliding-window record")
+    pub fn record(&mut self, timestamp: Instant) {
+        self.timestamps.push_back(timestamp);
+        self.evict(timestamp);
     }
 
     /// Returns the current throughput in messages per second.
@@ -57,6 +57,22 @@ impl ThroughputWindow {
     /// Computed as: `count_in_window / window_secs`.
     /// Returns `0.0` when the window is empty.
     pub fn messages_per_second(&self) -> f64 {
-        todo!("STORY-028: implement messages_per_second calculation")
+        if self.timestamps.is_empty() {
+            return 0.0;
+        }
+        self.timestamps.len() as f64 / self.window_secs as f64
+    }
+
+    /// Evict timestamps outside the sliding window relative to `reference`.
+    fn evict(&mut self, reference: Instant) {
+        let window = Duration::from_secs(self.window_secs);
+        // Remove from front while the entry is older than `window_secs` ago.
+        while let Some(&front) = self.timestamps.front() {
+            if reference.duration_since(front) > window {
+                self.timestamps.pop_front();
+            } else {
+                break;
+            }
+        }
     }
 }
