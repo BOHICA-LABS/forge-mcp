@@ -12,6 +12,7 @@
 //! - Feed health and security crates with raw message observations
 
 pub mod buffer;
+pub mod replay;
 pub mod throughput;
 pub mod timing;
 pub mod types;
