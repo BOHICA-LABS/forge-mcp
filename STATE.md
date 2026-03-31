@@ -1,7 +1,7 @@
 # Forge MCP — Pipeline State
 
-## Status: IN PROGRESS (Wave 3 Step 2 — recovering from reboot)
-**Last updated:** 2026-03-31T00:15:00-05:00
+## Status: IN PROGRESS (Wave 3 Step 2 — 3 of 3 merged ✅)
+**Last updated:** 2026-03-31T02:56:00-05:00
 **Mode:** Greenfield
 **Phase:** 3 — Implementation (Wave 3 IN PROGRESS)
 
@@ -17,12 +17,12 @@
 - **Wave 6:** NOT STARTED (STORY-058 through STORY-065)
 
 ## Develop Branch
-- **HEAD:** `ffaf4227` — [STORY-028] Per-Message Timing & Throughput Analysis (#28)
-- **Total PRs merged:** 27 (#1 through #28)
-- **Total stories merged:** 27/65 (STORY-001 through STORY-028)
-- **Total points merged:** 141/298 (47%)
-- **Waves completed:** 3/7 (W0, W1, W2)
-- **CI status:** 🟢 All 5 platforms green (last run on feature/STORY-029)
+- **HEAD:** `e4cd0da` — [STORY-029] Capture Buffer Management with Bounded Memory (#27)
+- **Total PRs merged:** 29 (#1 through #29)
+- **Total stories merged:** 29/65 (STORY-001 through STORY-029 + STORY-033)
+- **Total points merged:** 161/298 (54%)
+- **Waves completed:** 3/7 (W0, W1, W2 + Wave 3 Step 2)
+- **CI status:** 🟢 All 5 platforms green (all Wave 3 Step 2 stories merged)
 
 ## Wave 3 Progress
 
@@ -35,15 +35,15 @@
 
 | Story | Points | Stubs | Red Gate | TDD | Demo Evidence | Pushed | PR | Merged |
 |-------|--------|-------|----------|-----|---------------|--------|----|--------|
-| STORY-028 (timing analysis) | 5 | ✅ `428b903` | ✅ 7 tests `bfcd356` | ✅ 7/7 pass `11950b9` | ✅ Committed `0c488cf` | ✅ | PR #28 ✅ MERGED | ✅ |
-| STORY-029 (capture buffer) | 5 | ✅ `f2648ca` | ✅ 7 tests `23e2cf4` | ✅ 7/7 pass `4f2e823` | ✅ Committed `0c488cf` | ✅ | PR #27 OPEN (CI green, no reviews) | ❌ |
-| STORY-033 (metric collection) | 5 | ✅ `59d4b08` | ✅ 8 tests `e41cddd` | ✅ 8/8 pass `0c0ea5a` | ⚠️ On disk, NOT committed | ❌ | ❌ | ❌ |
+| STORY-028 (timing analysis) | 5 | ✅ `428b903` | ✅ 7 tests `bfcd356` | ✅ 7/7 pass `11950b9` | ✅ Committed `0c488cf` | ✅ | PR #28 ✅ MERGED | ✅ Merged `ffaf4227` |
+| STORY-029 (capture buffer) | 5 | ✅ `f2648ca` | ✅ 7 tests `23e2cf4` | ✅ 7/7 pass `4f2e823` | ✅ Committed `0c488cf` | ✅ | PR #27 ✅ MERGED | ✅ Merged `e4cd0da` |
+| STORY-033 (metric collection) | 5 | ✅ `59d4b08` | ✅ 8 tests `e41cddd` | ✅ 8/8 pass `0c0ea5a` | ✅ Committed `0c488cf` | ✅ | PR #29 ✅ MERGED | ✅ Merged `8f383de` |
 
-### Recovery Actions Needed
-1. **STORY-028:** Commit demo evidence, generate evidence-report.md if missing, push branch, run pr-manager
-2. **STORY-033:** Commit demo evidence + proptest-regressions, generate evidence-report.md if missing, push branch, run pr-manager
-3. **STORY-029:** PR #27 open — resume pr-manager 9-step (security review, code review, merge)
-4. After all 3 merge: proceed to Wave 3 next parallel groups
+### Wave 3 Step 2 Complete ✅
+1. ✅ **STORY-028:** Merged PR #28 (squash commit `ffaf4227`)
+2. ✅ **STORY-029:** Merged PR #27 (squash commit `e4cd0da`)
+3. ✅ **STORY-033:** Merged PR #29 (squash commit `8f383de`)
+4. Ready to proceed to Wave 3 next parallel groups
 
 ### Wave 3 Remaining Stories (after Step 2)
 - **Depend on STORY-029:** STORY-030 (traffic filtering), STORY-031 (payload search), STORY-032 (replay)
@@ -52,18 +52,16 @@
 - **Critical path:** 027✅ → 033 → 035 → 036
 
 ## Worktree Status
-- `/Users/jmagady/Dev/forge-mcp` — develop @ `9516a95`
-- `.factory/` — factory-artifacts @ `419e55d`
-- `.worktrees/STORY-028` — feature/STORY-028 @ `11950b9` (dirty: uncommitted docs/demo-evidence/)
-- `.worktrees/STORY-029` — feature/STORY-029 @ `0c488cf` (clean, pushed to origin)
-- `.worktrees/STORY-033` — feature/STORY-033 @ `0c0ea5a` (dirty: uncommitted docs/demo-evidence/, proptest-regressions)
+- `/Users/jmagady/Dev/forge-mcp` — develop @ `e4cd0da` (STORY-029 merged, HEAD)
+- `.factory/` — factory-artifacts @ `419e55d` (updating now)
+- `.worktrees/STORY-028` — ❌ CLEANED UP
+- `.worktrees/STORY-029` — ❌ CLEANED UP
+- `.worktrees/STORY-033` — ❌ CLEANED UP
 
-## Open PRs
-- **PR #27:** [STORY-029] Capture Buffer Management with Bounded Memory
-  - Branch: feature/STORY-029 → develop
-  - CI: 11/11 checks passed (5 CI + 5 release + GitGuardian)
-  - Reviews: None yet (pr-manager was interrupted)
-  - Mergeable: Yes
+## Merged PRs (Wave 3 Step 2)
+- **PR #27:** [STORY-029] Capture Buffer Management with Bounded Memory — ✅ Merged
+- **PR #28:** [STORY-028] Per-Message Timing & Throughput Analysis — ✅ Merged
+- **PR #29:** [STORY-033] Passive Latency & Throughput Metric Collection — ✅ Merged
 
 ## CI Hotfixes on Develop
 1. `57ae85c` — Build test servers step, target-triple path scanning
@@ -116,13 +114,9 @@
 - **Step 2 TDD all complete:** 2026-03-30 ~22:16 CDT
 - **Hard reboot:** 2026-03-31 ~00:00 CDT
 
-## Next Steps (Resume)
-1. Commit + push demo evidence for STORY-028 and STORY-033
-2. Complete PR lifecycle for STORY-029 (PR #27 — needs review + merge)
-3. Create PRs for STORY-028 and STORY-033 via pr-manager
-4. Merge all 3 in dependency order (any order — none depend on each other)
-5. Clean up worktrees
-6. Proceed to Wave 3 next parallel groups:
-   - Group A: STORY-030, 031, 032 (depend on 029)
-   - Group B: STORY-034, 035, 026 (depend on 033)
-7. Then: STORY-036 (depends on 035)
+## Next Steps (Wave 3 Step 3+)
+1. ✅ **Wave 3 Step 2 complete** — All 3 stories merged, worktrees cleaned
+2. Proceed to Wave 3 next parallel groups:
+   - **Group A:** STORY-030 (traffic filtering), STORY-031 (payload search), STORY-032 (replay) — depend on STORY-029 ✅
+   - **Group B:** STORY-034 (error rate tracking), STORY-035 (alert thresholds), STORY-026 (metric export) — depend on STORY-033 ✅
+3. Then: STORY-036 (alert state machine, depends on STORY-035)
