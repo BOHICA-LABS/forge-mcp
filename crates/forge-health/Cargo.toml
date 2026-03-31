@@ -7,9 +7,13 @@ repository.workspace = true
 description = "MCP server health monitoring and alerting for Forge MCP (L2)"
 
 [dependencies]
-forge-traffic = { workspace = true }
+forge-core = { workspace = true }
 
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+hdrhistogram = "7"
+
+[dev-dependencies]
+proptest = "1"

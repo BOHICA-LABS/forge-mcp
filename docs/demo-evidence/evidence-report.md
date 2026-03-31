@@ -1,159 +1,127 @@
-# Demo Evidence Report — STORY-028: Timing Analysis
+# STORY-033 Demo Evidence Report
 
 Generated: 2026-03-31
 
 ## Summary
 
-This report maps demo recording artifacts to acceptance criteria and edge cases
-for STORY-028 (Timing Analysis — `TimingAnalyzer` in `forge-traffic`).
-
-All recordings were produced via VHS tape scripts and captured as both `.webm`
-(video) and `.gif` (animated image) for review.
+This directory contains demo recordings and evidence artifacts for STORY-033
+(forge-health metrics subsystem). Files are organized by Acceptance Criterion (AC),
+Edge Case (EC), and Verification Property (VP).
 
 ---
 
 ## Acceptance Criteria Coverage
 
-### AC-001 — Per-Message Latency (BC-4.09.002)
+### AC-001 — Latency Histogram
 
-> For each request/response pair matched by ID, `forge-traffic` computes
-> `latency_ms: f64` as the elapsed time between request `MessageCaptured` and
-> response `MessageCaptured`. Result stored in `TimedMessage`.
->
-> **Test:** `test_BC_4_09_002_per_message_latency()`
+Demonstrates that the latency histogram correctly records and reports
+per-request latency distributions.
 
-| Artifact | Type |
-|----------|------|
-| `AC-001-per-message-latency.tape` | VHS tape script |
-| `AC-001-per-message-latency.webm` | Video recording |
-| `AC-001-per-message-latency.gif` | Animated GIF |
+| File | Type | Description |
+|------|------|-------------|
+| `AC-001-latency-histogram.tape` | VHS tape | Demo script source |
+| `AC-001-latency-histogram.webm` | Video | Full-resolution recording |
+| `AC-001-latency-histogram.gif` | GIF | Animated preview |
 
----
+### AC-002 — Throughput Counter
 
-### AC-002 — Throughput Calculation (BC-4.09.002)
+Demonstrates that the throughput counter correctly accumulates message counts
+and resets on demand.
 
-> The traffic analyzer computes throughput as messages/second over a
-> configurable sliding window (default 10s). Updated on each new
-> `MessageCaptured` event.
->
-> **Test:** `test_BC_4_09_002_throughput_calculation()`
+| File | Type | Description |
+|------|------|-------------|
+| `AC-002-throughput-counter.tape` | VHS tape | Demo script source |
+| `AC-002-throughput-counter.webm` | Video | Full-resolution recording |
+| `AC-002-throughput-counter.gif` | GIF | Animated preview |
 
-| Artifact | Type |
-|----------|------|
-| `AC-002-throughput-calculation.tape` | VHS tape script |
-| `AC-002-throughput-calculation.webm` | Video recording |
-| `AC-002-throughput-calculation.gif` | Animated GIF |
+### AC-004 — Metric Snapshot
 
----
+Demonstrates that `MetricSnapshot` captures a point-in-time consistent view
+of all registered metrics.
 
-### AC-003 — Unmatched Response Stored Without Latency (BC-4.09.002)
-
-> Responses without a matching request ID (late responses, server-initiated)
-> are stored without latency data (`latency_ms: None`).
->
-> **Test:** `test_BC_4_09_002_unmatched_response_no_latency()`
-
-| Artifact | Type |
-|----------|------|
-| `AC-003-unmatched-response.tape` | VHS tape script |
-| `AC-003-unmatched-response.webm` | Video recording |
-| `AC-003-unmatched-response.gif` | Animated GIF |
+| File | Type | Description |
+|------|------|-------------|
+| `AC-004-metric-snapshot.tape` | VHS tape | Demo script source |
+| `AC-004-metric-snapshot.webm` | Video | Full-resolution recording |
+| `AC-004-metric-snapshot.gif` | GIF | Animated preview |
 
 ---
 
-### AC-004 — Message Ordering Preserved (BC-4.09.002 / DI-006)
+## Edge Cases
 
-> Messages are stored in received-order. Reordered batch responses (E-PRO-009)
-> are flagged in `TimedMessage.reordered: bool`.
->
-> **Test:** `test_BC_4_09_002_message_ordering_preserved()`
+### EC-001 — Zero Messages
 
-| Artifact | Type |
-|----------|------|
-| `AC-004-message-ordering.tape` | VHS tape script |
-| `AC-004-message-ordering.webm` | Video recording |
-| `AC-004-message-ordering.gif` | Animated GIF |
+Demonstrates correct behavior when no messages have been processed
+(histogram and counter both return zero-state snapshots).
 
----
+| File | Type | Description |
+|------|------|-------------|
+| `EC-001-zero-messages.tape` | VHS tape | Demo script source |
+| `EC-001-zero-messages.webm` | Video | Full-resolution recording |
+| `EC-001-zero-messages.gif` | GIF | Animated preview |
 
-## Edge Case Coverage
+### EC-002 — Single Message
 
-### EC-001 — Notification Without Request ID (No Pairing)
+Demonstrates correct behavior with exactly one message processed
+(boundary condition for statistical calculations).
 
-> Notifications (no request ID) produce no latency pairing; direction tracked
-> only.
+| File | Type | Description |
+|------|------|-------------|
+| `EC-002-single-message.tape` | VHS tape | Demo script source |
+| `EC-002-single-message.webm` | Video | Full-resolution recording |
+| `EC-002-single-message.gif` | GIF | Animated preview |
 
-| Artifact | Type |
-|----------|------|
-| `EC-001-notification-no-pairing.tape` | VHS tape script |
-| `EC-001-notification-no-pairing.webm` | Video recording |
-| `EC-001-notification-no-pairing.gif` | Animated GIF |
+### EC-003 — High Latency
 
----
+Demonstrates that extremely high latency values are recorded without overflow
+or precision loss.
 
-### EC-002 — Duplicate Response ID Flagged
+| File | Type | Description |
+|------|------|-------------|
+| `EC-003-high-latency.tape` | VHS tape | Demo script source |
 
-> When a second response arrives with the same ID as a previously matched
-> response, the duplicate is flagged in `TimedMessage`.
+### EC-004 — Reset Clears
 
-| Artifact | Type |
-|----------|------|
-| `EC-002-duplicate-response.tape` | VHS tape script |
-| `EC-002-duplicate-response.webm` | Video recording |
-| `EC-002-duplicate-response.gif` | Animated GIF |
+Demonstrates that a metric reset fully clears accumulated state, with
+subsequent observations starting from a clean baseline.
 
----
-
-### EC-003 — Empty Analyzer Baseline
-
-> Validates that a freshly constructed `TimingAnalyzer` with no messages
-> produces zero-value metrics without panicking.
-
-| Artifact | Type |
-|----------|------|
-| `EC-003-empty-analyzer.tape` | VHS tape script |
-
-> Note: No `.webm`/`.gif` produced for EC-003 (output is trivially empty;
-> tape script serves as sole artifact).
+| File | Type | Description |
+|------|------|-------------|
+| `EC-004-reset-clears.tape` | VHS tape | Demo script source |
 
 ---
 
-## Artifact Inventory
+## Verification Properties
 
-| File | AC/EC | Format |
-|------|-------|--------|
-| AC-001-per-message-latency.tape | AC-001 | VHS tape |
-| AC-001-per-message-latency.webm | AC-001 | Video |
-| AC-001-per-message-latency.gif | AC-001 | GIF |
-| AC-002-throughput-calculation.tape | AC-002 | VHS tape |
-| AC-002-throughput-calculation.webm | AC-002 | Video |
-| AC-002-throughput-calculation.gif | AC-002 | GIF |
-| AC-003-unmatched-response.tape | AC-003 | VHS tape |
-| AC-003-unmatched-response.webm | AC-003 | Video |
-| AC-003-unmatched-response.gif | AC-003 | GIF |
-| AC-004-message-ordering.tape | AC-004 | VHS tape |
-| AC-004-message-ordering.webm | AC-004 | Video |
-| AC-004-message-ordering.gif | AC-004 | GIF |
-| EC-001-notification-no-pairing.tape | EC-001 | VHS tape |
-| EC-001-notification-no-pairing.webm | EC-001 | Video |
-| EC-001-notification-no-pairing.gif | EC-001 | GIF |
-| EC-002-duplicate-response.tape | EC-002 | VHS tape |
-| EC-002-duplicate-response.webm | EC-002 | Video |
-| EC-002-duplicate-response.gif | EC-002 | GIF |
-| EC-003-empty-analyzer.tape | EC-003 | VHS tape |
+### VP-008 — Proptest Round-Trip
 
-**Total:** 19 artifacts across 4 ACs and 3 ECs.
+Property-based test demonstrating that metric values survive a
+serialize → deserialize round-trip without loss.
+
+| File | Type | Description |
+|------|------|-------------|
+| `VP-008-proptest.tape` | VHS tape | Demo script source |
 
 ---
 
-## Traceability
+## Auxiliary / Scaffolding
 
-| AC/EC | Behavioral Contract | Test | Evidence |
-|-------|---------------------|------|---------|
-| AC-001 | BC-4.09.002 (per-message latency) | `test_BC_4_09_002_per_message_latency` | ✅ webm + gif |
-| AC-002 | BC-4.09.002 (throughput) | `test_BC_4_09_002_throughput_calculation` | ✅ webm + gif |
-| AC-003 | BC-4.09.002 (unmatched) | `test_BC_4_09_002_unmatched_response_no_latency` | ✅ webm + gif |
-| AC-004 | BC-4.09.002 / DI-006 | `test_BC_4_09_002_message_ordering_preserved` | ✅ webm + gif |
-| EC-001 | — | — | ✅ tape |
-| EC-002 | — | — | ✅ webm + gif |
-| EC-003 | — | — | ✅ tape |
+| File | Notes |
+|------|-------|
+| `test-simple.tape` | Initial scaffolding tape used during development |
+| `test-sleep.tape` | Timing/sleep behavior verification |
+| `test-sleep.webm` | Video recording of sleep test |
+| `test-sleep.gif` | GIF preview of sleep test |
+
+---
+
+## Proptest Regressions
+
+Regression seeds for property-based tests are stored alongside the test module:
+
+```
+crates/forge-health/tests/metric_tests.proptest-regressions
+```
+
+These seeds are committed so that previously-found failures are always replayed
+on future runs, preventing regression.
