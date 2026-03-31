@@ -9,6 +9,24 @@
 //! - Matches requests to responses by JSON-RPC `id` field.
 //! - Unmatched responses produce `latency_ms: None` (AC-003).
 //! - Preserves received-order; flags reordered batch responses (AC-004).
+//!
+//! ## Reordering Semantics (PRF-001)
+//!
+//! `TimedMessage.reordered` has the following precise semantics:
+//!
+//! | Scenario | Response.reordered | Request.reordered |
+//! |----------|--------------------|-------------------|
+//! | Normal (req → resp) | `false` | `false` |
+//! | Out-of-order (resp → req) | `false` | `true` |
+//! | Truly unmatched response | `false` | N/A (no request) |
+//!
+//! When a response arrives before its matching request, we cannot immediately
+//! determine if it is out-of-order or genuinely unmatched.  We optimistically
+//! emit it with `reordered: false` and track its ID in `orphan_responses`.
+//! If the matching request later arrives, the **request** `TimedMessage` is
+//! emitted with `reordered: true` — signalling that the pair was inverted.
+//! Truly unmatched responses (whose request never arrives) retain `reordered:
+//! false`, correctly distinguishing them from the out-of-order case.
 
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
@@ -39,6 +57,13 @@ pub struct TimingAnalyzer {
     /// Set of JSON-RPC `id` values whose first response has already been matched
     /// and consumed. Used to detect duplicate responses (EC-002).
     consumed: HashSet<String>,
+    /// Set of JSON-RPC `id` values for responses that arrived before their
+    /// matching request (orphan responses).  When the late request arrives,
+    /// its `TimedMessage` is emitted with `reordered: true` to signal the
+    /// inversion.  Truly unmatched responses (whose request never arrives)
+    /// remain in this set but their already-emitted `TimedMessage` correctly
+    /// has `reordered: false` (PRF-001 fix).
+    orphan_responses: HashSet<String>,
 }
 
 impl TimingAnalyzer {
@@ -47,6 +72,7 @@ impl TimingAnalyzer {
         Self {
             pending: HashMap::new(),
             consumed: HashSet::new(),
+            orphan_responses: HashSet::new(),
         }
     }
 
@@ -58,6 +84,15 @@ impl TimingAnalyzer {
     ///
     /// Returns `None` if the message should be silently dropped (e.g. a
     /// duplicate response that has already been processed — EC-002).
+    ///
+    /// ## Reordering flag placement
+    ///
+    /// The `reordered` flag is set on the **request** `TimedMessage` when its
+    /// matching response had already arrived earlier (out-of-order).  A
+    /// response emitted without a matching request always has `reordered:
+    /// false` — we cannot distinguish "truly unmatched" from "out-of-order"
+    /// at response-emit time, so we use the conservative/correct default and
+    /// fix it when the late request arrives (PRF-001).
     pub fn process_message(&mut self, msg: &MessageCaptured) -> Option<TimedMessage> {
         // Extract the JSON-RPC `id` field from the payload, if present.
         let rpc_id = extract_rpc_id(&msg.payload);
@@ -70,14 +105,24 @@ impl TimingAnalyzer {
         let is_request = msg.method.is_some() && rpc_id.is_some() && !is_response;
 
         if is_request {
-            // Requests: store in pending map, return TimedMessage without latency.
             let id_key = rpc_id.expect("checked above");
-            self.pending.insert(
-                id_key,
-                PendingRequest {
-                    timestamp: msg.timestamp,
-                },
-            );
+
+            // Out-of-order detection (AC-004 / PRF-001): if a response for
+            // this id already arrived (orphan), flag this request as reordered.
+            let reordered = self.orphan_responses.remove(&id_key);
+
+            // Store in pending map so a future response can compute latency.
+            // If the response already arrived (reordered == true), there is no
+            // pending entry to store — and no future response is expected —
+            // so we skip insertion in that case.
+            if !reordered {
+                self.pending.insert(
+                    id_key,
+                    PendingRequest {
+                        timestamp: msg.timestamp,
+                    },
+                );
+            }
 
             Some(TimedMessage {
                 id: msg.id,
@@ -85,12 +130,12 @@ impl TimingAnalyzer {
                 direction: msg.direction.clone(),
                 payload: msg.payload.clone(),
                 latency_ms: None,
-                reordered: false,
+                reordered,
             })
         } else if is_response {
             let id_key = match rpc_id {
                 Some(id) => id,
-                // Response without an id — treat as unmatched.
+                // Response without an id — treat as unmatched (no reordering).
                 None => {
                     return Some(TimedMessage {
                         id: msg.id,
@@ -111,14 +156,10 @@ impl TimingAnalyzer {
 
             // Look up the pending request.
             if let Some(pending) = self.pending.remove(&id_key) {
+                // Matched pair in normal order (request arrived first).
                 // Mark as consumed so later duplicates are dropped.
                 self.consumed.insert(id_key);
 
-                // Reorder check: if the response sequence < pending request
-                // sequence that would be odd (shouldn't happen here since we
-                // only call this path when the request WAS in the pending map).
-                // The reordering case is when there was NO pending entry at all,
-                // meaning the response arrived before the request.
                 let latency_ms = duration_ms(pending.timestamp, msg.timestamp);
 
                 Some(TimedMessage {
@@ -131,19 +172,24 @@ impl TimingAnalyzer {
                 })
             } else {
                 // No pending request found.
-                // This could mean either:
-                // (a) Genuinely unmatched (AC-003) — id never seen before.
-                // (b) Out-of-order: the request hasn't arrived yet (AC-004).
                 //
-                // We can't distinguish these at process_message time without
-                // future knowledge, so we flag it as reordered (conservative).
-                // The test for AC-004 feeds response BEFORE request, so this
-                // is the correct path for that scenario.
+                // The response may be:
+                //   (a) Genuinely unmatched (AC-003) — id never requested.
+                //   (b) Out-of-order (AC-004) — request hasn't arrived yet.
                 //
-                // For AC-003 (id=99 never seen before), the test only checks
-                // latency_ms: None — it does NOT assert reordered: false, so
-                // setting reordered: true here is compatible with AC-003.
-                self.consumed.insert(id_key);
+                // We cannot distinguish these at emission time.  Per PRF-001
+                // the correct behaviour is:
+                //   • Emit the response with `reordered: false` (optimistic).
+                //   • Track the id in `orphan_responses`.
+                //   • When/if the late request arrives, flag the REQUEST with
+                //     `reordered: true` (see the `is_request` branch above).
+                //   • Truly unmatched responses (request never arrives) keep
+                //     `reordered: false` — correct by default.
+                //
+                // Mark as consumed immediately so duplicate responses to the
+                // same orphan id are still dropped correctly (EC-002).
+                self.consumed.insert(id_key.clone());
+                self.orphan_responses.insert(id_key);
 
                 Some(TimedMessage {
                     id: msg.id,
@@ -151,7 +197,7 @@ impl TimingAnalyzer {
                     direction: msg.direction.clone(),
                     payload: msg.payload.clone(),
                     latency_ms: None,
-                    reordered: true,
+                    reordered: false,
                 })
             }
         } else {
@@ -200,5 +246,3 @@ fn duration_ms(start: Instant, end: Instant) -> f64 {
         .map(|d| d.as_secs_f64() * 1000.0)
         .unwrap_or(0.0)
 }
-
-
