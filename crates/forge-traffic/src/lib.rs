@@ -2,7 +2,7 @@
 //!
 //! MCP traffic capture, recording, and replay for Forge MCP.
 //!
-//! This is an L1 crate with no internal dependencies (parallel to `forge-core`).
+//! This is an L1 crate that depends only on `forge-core`.
 //!
 //! ## Responsibilities
 //! - Intercept and record MCP JSON-RPC message streams
@@ -10,3 +10,11 @@
 //! - Provide replay capability for captured sessions (for regression testing)
 //! - Compute traffic statistics: message rates, payload sizes, latency distributions
 //! - Feed health and security crates with raw message observations
+
+pub mod throughput;
+pub mod timing;
+pub mod types;
+
+pub use throughput::ThroughputWindow;
+pub use timing::TimingAnalyzer;
+pub use types::TimedMessage;
