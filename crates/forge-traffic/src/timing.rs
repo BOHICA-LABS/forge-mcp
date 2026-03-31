@@ -100,8 +100,7 @@ impl TimingAnalyzer {
         // Determine whether this message is a request or a response.
         // Heuristic: requests have a `method` field; responses have `result`
         // or `error`. Notifications also have `method` but no `id`.
-        let is_response = msg.payload.get("result").is_some()
-            || msg.payload.get("error").is_some();
+        let is_response = msg.payload.get("result").is_some() || msg.payload.get("error").is_some();
         let is_request = msg.method.is_some() && rpc_id.is_some() && !is_response;
 
         if is_request {

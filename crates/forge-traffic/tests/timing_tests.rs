@@ -13,7 +13,7 @@
 use std::time::{Duration, Instant};
 
 use forge_core::events::{MessageCaptured, MessageDirection};
-use forge_traffic::{TimedMessage, TimingAnalyzer, ThroughputWindow};
+use forge_traffic::{ThroughputWindow, TimedMessage, TimingAnalyzer};
 use uuid::Uuid;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -355,8 +355,14 @@ fn test_reordered_vs_unmatched_distinction() {
         .expect("resp66 must produce TimedMessage");
 
     // Both responses are emitted with reordered: false (we don't know yet).
-    assert!(!resp55_timed.reordered, "resp55 initially emitted with reordered: false");
-    assert!(!resp66_timed.reordered, "resp66 emitted with reordered: false (truly unmatched)");
+    assert!(
+        !resp55_timed.reordered,
+        "resp55 initially emitted with reordered: false"
+    );
+    assert!(
+        !resp66_timed.reordered,
+        "resp66 emitted with reordered: false (truly unmatched)"
+    );
 
     // Late request for id=55 arrives — it should carry reordered: true.
     let req55_timed = analyzer
@@ -446,8 +452,14 @@ fn test_duplicate_orphan_response_dropped() {
     let first = analyzer
         .process_message(&resp1)
         .expect("first orphan response must produce TimedMessage");
-    assert!(!first.reordered, "orphan response must not be flagged reordered");
-    assert!(first.latency_ms.is_none(), "orphan response must have no latency");
+    assert!(
+        !first.reordered,
+        "orphan response must not be flagged reordered"
+    );
+    assert!(
+        first.latency_ms.is_none(),
+        "orphan response must have no latency"
+    );
 
     let second = analyzer.process_message(&resp2);
     assert!(
